@@ -1,0 +1,7 @@
+{
+    "python.linting.pylintEnabled": true,
+    "python.pythonPath": "/Users/charleslai/anaconda4/bin/python",
+    "python.condaPath": "/Users/charleslai/anaconda4/bin/conda",
+    "terminal.integrated.shell.linux": "/usr/local/bin/fish",
+    "terminal.integrated.shell.osx": "/usr/local/bin/fish"
+}

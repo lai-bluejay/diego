@@ -1,0 +1,3 @@
+smac==0.8
+ConfigSpace
+autosklearn
