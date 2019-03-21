@@ -43,7 +43,7 @@ def cal_woe_iv(good_counts, bad_counts, all_good, all_bad):
     return woe, iv
 
 
-class AutoBinning(object):
+class BaseBinning(object):
     """
        特征分桶模块，输入数据：特征向量，特征标注
                      输出数据：分桶结果，分桶方法
@@ -332,7 +332,7 @@ class AutoBinning(object):
         result_bins_box['iv'] = iv
         return result_bins_box
 
-class EqualWidthBinning(AutoBinning):
+class EqualWidthBinning(BaseBinning):
     def __init__(self, feature_vector=None, label_vector=None, param_dic={}, **kwargs):
         super(EqualWidthBinning, self).__init__(feature_vector=feature_vector, label_vector=label_vector,
                                                 param_dic=param_dic,
@@ -371,7 +371,7 @@ class EqualWidthBinning(AutoBinning):
         return init_map
 
 
-class EqualFreqBinning(AutoBinning):
+class EqualFreqBinning(BaseBinning):
     def __init__(self, feature_vector=None, label_vector=None, param_dic={}, **kwargs):
         super(EqualFreqBinning, self).__init__(feature_vector=feature_vector, label_vector=label_vector,
                                                param_dic=param_dic,
@@ -411,7 +411,7 @@ class EqualFreqBinning(AutoBinning):
         return init_map
 
 
-class XGBBinning(AutoBinning):
+class XGBBinning(BaseBinning):
     def __init__(self, feature_vector=None, label_vector=None, param_dic={}, **kwargs):
         super(XGBBinning, self).__init__(feature_vector=feature_vector, label_vector=label_vector, param_dic=param_dic,
                                          **kwargs)
@@ -472,7 +472,7 @@ class XGBBinning(AutoBinning):
         return init_map
 
 
-class LGBBinning(AutoBinning):
+class LGBBinning(BaseBinning):
     def __init__(self, feature_vector=None, label_vector=None, param_dic={}, **kwargs):
         super(LGBBinning, self).__init__(feature_vector=feature_vector, label_vector=label_vector, param_dic=param_dic,
                                          **kwargs)
@@ -541,7 +541,7 @@ class LGBBinning(AutoBinning):
         return init_map
 
 
-class ModlBinning(AutoBinning):
+class ModlBinning(BaseBinning):
     def __init__(self, feature_vector=None, label_vector=None, param_dic={}, **kwargs):
         super(ModlBinning, self).__init__(feature_vector=feature_vector, label_vector=label_vector, param_dic=param_dic,
                                           **kwargs)

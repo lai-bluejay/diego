@@ -148,7 +148,7 @@ class AutobinningTransform(BaseEstimator, TransformerMixin):
         self.delete_list = []
 
     
-    def fit(self,featuresmatrix,labelvector,featurename=None):
+    def fit(self,X,y,featurename=None):
         """
         @note:单进程版本autobinning
         @param featuresmatrix: 特征矩阵
