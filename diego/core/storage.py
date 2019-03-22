@@ -14,7 +14,6 @@ import threading
 import numpy as np
 
 from diego import basic
-from optuna import types
 
 from typing import Any  # NOQA
 from typing import Dict  # NOQA
