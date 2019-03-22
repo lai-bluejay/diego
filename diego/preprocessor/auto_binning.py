@@ -32,7 +32,7 @@ import numpy as np
 from collections import defaultdict
 # import lightgbm as lgb
 
-from base_binning import EqualFreqBinning, EqualWidthBinning, XGBBinning, ModlBinning
+from diego.preprocessor.base_binning import EqualFreqBinning, EqualWidthBinning, XGBBinning, ModlBinning
 
 CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
 

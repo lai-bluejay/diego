@@ -27,8 +27,42 @@ class Estimator():
 
 ```
 
-# installation
+# auto ml 补完计划
+[overview](https://hackernoon.com/a-brief-overview-of-automatic-machine-learning-solutions-automl-2826c7807a2a)
+## bayes opt
+1. [fmfn/bayes](https://github.com/fmfn/BayesianOptimization)
+2. [auto-sklearn](https://github.com/automl/auto-sklearn)
 
+
+## grid search
+1. H2O.ai
+
+## tree parzen
+1. hyperopt
+2. mlbox
+
+## metaheuristics grid search
+1. pybrain
+
+## generation
+1.tpot
+
+# dl
+1. ms  nni
+2. 
+
+# installation
+## install swig
+推荐使用conda安装
+```shell
+conda install swig
+```
+## 其他dep
+```
+pip install pyrfr
+pip install smac
+pip install autosklearn
+```
 
 # issues
 

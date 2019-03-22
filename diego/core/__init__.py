@@ -6,3 +6,4 @@ file in :relativeFile
 Author: Charles_Lai
 Email: lai.bluejay@gmail.com
 """
+from diego.core.storage import InMemoryStorage as Storage

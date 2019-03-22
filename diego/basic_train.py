@@ -1,4 +1,11 @@
-# -*- encoding: utf-8 -*-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+diego/basic_train.py was created on 2019/03/21.
+file in :relativeFile
+Author: Charles_Lai
+Email: lai.bluejay@gmail.com
+"""
 import io
 import json
 import os

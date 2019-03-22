@@ -6,17 +6,41 @@ file in :relativeFile
 Author: Charles_Lai
 Email: lai.bluejay@gmail.com
 """
+from typing import Optional, List
+import warnings
+import numpy as np
+
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.utils import check_X_y, check_array
+from sklearn.metrics.classification import type_of_target
+
 from autosklearn.automl import BaseAutoML
-from basic import *
+from diego.basic import *
+from diego.metrics import Scorer
 
 
 class DiegoClassifier(BaseAutoML):
+    # C3 BFS search class methods
+    # TODO Rewrite Ensemble methods
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # 暂时是二分类或者多分类
         self._task_mapping = {'multilabel-indicator': MULTILABEL_CLASSIFICATION,
                               'multiclass': MULTICLASS_CLASSIFICATION,
                               'binary': BINARY_CLASSIFICATION}
+
+    def _check_y(self, y):
+        y = sklearn.utils.check_array(y, ensure_2d=False)
+
+        y = np.atleast_1d(y)
+        if y.ndim == 2 and y.shape[1] == 1:
+            warnings.warn("A column-vector y was passed when a 1d array was"
+                          " expected. Will change shape via np.ravel().",
+                          sklearn.utils.DataConversionWarning, stacklevel=2)
+            y = np.ravel(y)
+
+        return y
 
     def fit(
         self,
@@ -30,14 +54,19 @@ class DiegoClassifier(BaseAutoML):
         only_return_configuration_space: bool = False,
         load_models: bool = True,
     ):
-        X, y = self._perform_input_checks(X, y)
+        # important, 都要做
+        X, y = check_X_y(X, y, accept_sparse="csr")
+        check_classification_targets(y)
+
         if X_test is not None:
-            X_test, y_test = self._perform_input_checks(X_test, y_test)
+            X_test, y_test = check_X_y(X_test, y_test)
             if len(y.shape) != len(y_test.shape):
                 raise ValueError('Target value shapes do not match: %s vs %s'
                                  % (y.shape, y_test.shape))
 
         y_task = type_of_target(y)
+
+        # 7 category
         task = self._task_mapping.get(y_task)
         if task is None:
             raise ValueError('Cannot work on data of type %s' % y_task)
@@ -48,7 +77,6 @@ class DiegoClassifier(BaseAutoML):
             else:
                 metric = accuracy
 
-        y, self._classes, self._n_classes = self._process_target_classes(y)
         if y_test is not None:
             # Map test values to actual values - TODO: copy to all kinds of
             # other parts in this code and test it!!!
@@ -56,7 +84,8 @@ class DiegoClassifier(BaseAutoML):
             for output_idx in range(len(self._classes)):
                 mapping = {self._classes[output_idx][idx]: idx
                            for idx in range(len(self._classes[output_idx]))}
-                enumeration = y_test if len(self._classes) == 1 else y_test[output_idx]
+                enumeration = y_test if len(
+                    self._classes) == 1 else y_test[output_idx]
                 y_test_new.append(
                     np.array([mapping[value] for value in enumeration])
                 )
@@ -79,45 +108,34 @@ class DiegoClassifier(BaseAutoML):
     def fit_ensemble(self, y, task=None, metric=None, precision='32',
                      dataset_name=None, ensemble_nbest=None,
                      ensemble_size=None):
-        y, _classes, _n_classes = self._process_target_classes(y)
-        if not hasattr(self, '_classes'):
-            self._classes = _classes
-        if not hasattr(self, '_n_classes'):
-            self._n_classes = _n_classes
+        y = self._process_target_classes(y)
 
         return super().fit_ensemble(y, task, metric, precision, dataset_name,
                                     ensemble_nbest, ensemble_size)
 
     def _process_target_classes(self, y):
-        y = super()._check_y(y)
+        y = self._check_y(y)
         self._n_outputs = 1 if len(y.shape) == 1 else y.shape[1]
 
         y = np.copy(y)
-
-        _classes = []
-        _n_classes = []
-
-        if self._n_outputs == 1:
-            classes_k, y = np.unique(y, return_inverse=True)
-            _classes.append(classes_k)
-            _n_classes.append(classes_k.shape[0])
-        else:
-            for k in range(self._n_outputs):
-                classes_k, y[:, k] = np.unique(y[:, k], return_inverse=True)
-                _classes.append(classes_k)
-                _n_classes.append(classes_k.shape[0])
-
-        _n_classes = np.array(_n_classes, dtype=np.int)
-
-        return y, _classes, _n_classes
+        self.classes_ = np.unique(y)
+        n_classes = len(self.classes_)
+        self.n_classes = n_classes
+        classes_ = self.classes_
+        return y
 
     def predict(self, X, batch_size=None, n_jobs=1):
+        return super().predict(X, batch_size=batch_size, n_jobs=n_jobs)
+
+    def predict_proba(self, X, batch_size=None, n_jobs=1):
+        return super().predict(X, batch_size=batch_size, n_jobs=n_jobs)
+
+    def predict_label(self, X, batch_size=None, n_jobs=1):
         predicted_probabilities = super().predict(X, batch_size=batch_size,
                                                   n_jobs=n_jobs)
-
         if self._n_outputs == 1:
             predicted_indexes = np.argmax(predicted_probabilities, axis=1)
-            predicted_classes = self._classes[0].take(predicted_indexes)
+            predicted_classes = self.classes_[0].take(predicted_indexes)
 
             return predicted_classes
         else:
@@ -127,10 +145,7 @@ class DiegoClassifier(BaseAutoML):
 
             for k in range(self._n_outputs):
                 output_predicted_indexes = predicted_indices[:, k].reshape(-1)
-                predicted_classes[:, k] = self._classes[k].take(
+                predicted_classes[:, k] = self.classes_[k].take(
                     output_predicted_indexes)
 
             return predicted_classes
-
-    def predict_proba(self, X, batch_size=None, n_jobs=1):
-        return super().predict(X, batch_size=batch_size, n_jobs=n_jobs)

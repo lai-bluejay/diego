@@ -1,3 +1,14 @@
+numpy
+scipy
+scikit-learn
+pandas
+xgboost
+pyrfr
 smac==0.8
 ConfigSpace
-autosklearn
+auto-sklearn
+deap
+update_checker
+tqdm
+stopit
+tpot
