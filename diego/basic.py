@@ -6,7 +6,8 @@ file in :relativeFile
 Author: Charles_Lai
 Email: lai.bluejay@gmail.com
 """
-
+# python 3.7
+# from dataclasses import dataclass
 from typing import Optional
 from typing import NamedTuple
 from typing import Dict
@@ -79,21 +80,9 @@ class StudyDirection(enum.Enum):
     MINIMIZE = 1
     MAXIMIZE = 2
 
-
-class FrozenTrial(
-        NamedTuple('_BaseFrozenTrial', [
-            ('number', int),
-            ('state', TrialState),
-            ('value', Optional[float]),
-            ('datetime_start', Optional[datetime]),
-            ('datetime_complete', Optional[datetime]),
-            ('params', Dict[str, Any]),
-            ('user_attrs', Dict[str, Any]),
-            ('system_attrs', Dict[str, Any]),
-            ('intermediate_values', Dict[int, float]),
-            ('params_in_internal_repr', Dict[str, float]),
-            ('trial_id', int),
-        ])):
+# python 3.7
+# @dataclass
+class BaseFrozenTrial(NamedTuple):
     """Status and results of a :class:`~diego.trial.Trial`.
 
     Attributes:
@@ -126,9 +115,21 @@ class FrozenTrial(
             is not supposed to be used by library users. Instead, please use :attr:`number` and
             :class:`~diego.study.Study.study_id` to identify a :class:`~diego.trial.Trial`.
     """
+    number: int
+    state: TrialState
+    value: Optional[float]
+    params: Dict[str, Any]
+    datetime_start: Optional[datetime]
+    datetime_complete: Optional[datetime]
+    user_attrs: Dict[str, Any]
+    system_attrs: Dict[str, Any]
+    intermediate_values: Dict[int, float]
+    params_in_internal_repr: Dict[str, float]
+    trial_id: int
+    clf: Any
 
+class FrozenTrial(BaseFrozenTrial):
     internal_fields = ['params_in_internal_repr', 'trial_id']
-
 
 class StudySummary(
         NamedTuple('StudySummary', [('study_id', int), ('study_name', str),

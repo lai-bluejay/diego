@@ -9,6 +9,11 @@ from typing import List
 from typing import Dict
 from typing import Callable
 from typing import Any
+
+from sklearn.pipeline import make_pipeline
+from sklearn.utils import validation
+from sklearn.externals import joblib
+
 from diego.depens import logging
 from diego.preprocessor import AutobinningTransform, LocalUncertaintySampling
 from diego.trials import Trial
@@ -69,7 +74,9 @@ class Study(object):
             storage,  # type: Union[str, storages.BaseStorage]
             sample_method=None,
             sample_params=dict(),
-            trials_list=list()
+            is_autobin=False,
+            bin_params=dict(),
+            export_model_path=None
     ):
         # type: (...) -> None
 
@@ -80,9 +87,19 @@ class Study(object):
             self.sampler = LocalUncertaintySampling(**sample_params)
         else:
             self.sampler = None
-
+        self.is_autobin = is_autobin
+        if self.is_autobin:
+            if len(bin_params) > 1:
+                self.bin_params = bin_params
+            else:
+                self.bin_params = dict()
+            self.binner = AutobinningTransform()
         self.study_id = self.storage.get_study_id_from_name(study_name)
         self.logger = logging.get_logger(__name__)
+        
+        #export model. should be joblib.Memory object
+        self.pipeline = None
+        self.export_model_path = export_model_path
 
     def __getstate__(self):
         # type: () -> Dict[Any, Any]
@@ -96,6 +113,12 @@ class Study(object):
 
         self.__dict__.update(state)
         self.logger = logging.get_logger(__name__)
+
+    def __init_bin_params(self,):
+        params = dict()
+        params['binning_method'] = 'xgb'
+        params['binning_value_type'] = 'woe'
+
 
     @property
     def best_value(self):
@@ -205,6 +228,19 @@ class Study(object):
 
         X_test, y_test = check_X_y(X_test, y_test)
         self.storage.set_test_storage(X_test, y_test)
+        # TODO Preprocess Trial
+        if self.sample_method == 'lus':
+            X_train, y_train = self.storage.X_train, self.storage.y_train
+            X_train, y_train = self.sampler.fit_transform(X_train, y_train)
+            self.storage.set_train_storage(X_train, y_train)
+        if self.is_autobin:
+            self.binner.fit(self.storage.X_train, self.storage.y_train)
+            X_train = self.binner.transform(self.storage.X_train)
+            X_test = self.binner.transform(X_test)
+            self.storage.set_train_storage(X_train, self.storage.y_train)
+            self.storage.set_test_storage(X_test, y_test)
+            self._pipe_add(['binning', self.binner])
+        
         if ttrials is None or ttrials == []:
             self.logger.warning('no trials, init by default params.')
             ttrials = self._init_trials()
@@ -213,6 +249,10 @@ class Study(object):
             self._optimize_sequential(ttrials, timeout, catch)
         else:
             self._optimize_parallel(ttrials, timeout, n_jobs, catch)
+
+        self._pipe_add(['best_trial', self.best_trial.clf])
+        if self.export_model_path:
+            joblib.dump()
 
     def set_user_attr(self, key, value):
         # type: (str, Any) -> None
@@ -489,7 +529,6 @@ class Study(object):
 
         trial.report(result)
         self.storage.set_trial_state(trial_number, basic.TrialState.COMPLETE)
-        print(self.storage.trials)
         self._log_completed_trial(trial_number, result)
 
         return trial
@@ -500,6 +539,22 @@ class Study(object):
         self.logger.info('Finished trial#{} resulted in value: {}. '
                          'Current best value is {}.'.format(
                              trial_number, value, self.best_value))
+
+    def _pipe_add(self, step:list):
+        """add steps to Study.pipeline
+        
+        Arguments:
+            step {[list]} -- ['name', clf]
+        """
+
+        if isinstance(step, list):
+            step = step
+        else:
+            step = ['unnamed step', step]
+        if self.pipeline is None:
+            self.pipeline = make_pipeline(step)
+        else:
+            self.pipeline.steps.append(step)
 
 
 def create_trial(study: Study):

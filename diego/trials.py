@@ -157,6 +157,7 @@ class Trial(BaseTrial):
         """
 
         self.storage.set_trial_value(self._trial_id, value)
+        self.storage.set_trial_clf(self._trial_id, self.clf)
         if step is not None:
             self.storage.set_trial_intermediate_value(self._trial_id, step, value)
 

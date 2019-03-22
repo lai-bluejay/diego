@@ -12,6 +12,7 @@ from datetime import datetime
 import threading
 
 import numpy as np
+from tpot import TPOTClassifier
 
 from diego import basic
 
@@ -180,7 +181,8 @@ class InMemoryStorage(object):
                     params_in_internal_repr={},
                     datetime_start=datetime.now(),
                     datetime_complete=None,
-                    trial_id=trial_id))
+                    trial_id=trial_id,
+                    clf=None))
         return trial_id
 
     def set_trial_state(self, trial_id, state):
@@ -207,6 +209,12 @@ class InMemoryStorage(object):
 
         with self._lock:
             self.trials[trial_id] = self.trials[trial_id]._replace(value=value)
+
+    def set_trial_clf(self, trial_id, clf):
+        with self._lock:
+            if isinstance(clf, TPOTClassifier):
+                clf = clf.fitted_pipeline_
+            self.trials[trial_id] = self.trials[trial_id]._replace(clf=clf)
 
     def set_trial_intermediate_value(self, trial_id, step, intermediate_value):
         # type: (int, int, float) -> bool

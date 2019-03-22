@@ -50,6 +50,8 @@ for t in all_trials:
 - [ ] 模型输出。model output
 - [ ] basic Classifier
 - [ ] fix mac os hanged in optimize pipeline
+- [ ] add preprocessor
+- [ ] add FeatureTools for automated feature engineering
 
 
 ## train

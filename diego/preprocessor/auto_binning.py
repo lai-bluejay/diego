@@ -107,6 +107,7 @@ class AutobinningTransform(BaseEstimator, TransformerMixin):
         keep_origin：set，集合中的特征不进行任何处理，保留原值
         bins_conf_file：配置文件名，默认为’binning_dict.conf’，指定具体特征分多少桶
         '''
+        kwargs.update(param_dic)
         self.cut_tt = kwargs.get('cut_tt',0.9)
         self.autobinning_dump_file = "_np_autobinnig_normal"
         self.binning_method = kwargs.get('binning_method', 'default')
