@@ -12,17 +12,30 @@ from shutil import rmtree
 from setuptools import find_packages, setup, Command
 
 # Package meta-data.
-NAME = 'mypackage'
-DESCRIPTION = 'My short description for my project.'
-URL = 'https://github.com/me/myproject'
+NAME = 'diego'
+DESCRIPTION = 'Diego: Data IntElliGence Out.'
+URL = 'https://github.com/lai-bluejay/diego'
 EMAIL = 'lai.bluejay@gmail.com'
 AUTHOR = 'Charles Lai'
 REQUIRES_PYTHON = '>=3.6.0'
-VERSION = None
+VERSION = '0.1.0'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
     # 'requests', 'maya', 'records',
+    'numpy>=1.12.1',
+    'scipy>=0.19.0',
+    'scikit-learn>=0.18.1',
+    'deap>=1.0',
+    'update_checker>=0.16',
+    'tqdm>=4.26.0',
+    'stopit>=1.1.1',
+    'pandas>=0.20.2',
+    'xgboost==0.82',
+    'pyrfr==0.7.4',
+    'smac==0.8',
+    'ConfigSpace==0.4.9',
+    'auto-sklearn==0.5.0'
 ]
 
 # What packages are optional?
@@ -36,6 +49,12 @@ EXTRAS = {
 # If you do change the License, remember to change the Trove Classifier for that!
 
 here = os.path.abspath(os.path.dirname(__file__))
+
+# setup_reqs = ['Cython', 'numpy']
+# with open(os.path.join(here, 'requirements.txt')) as fp:
+#     install_reqs = [r.rstrip() for r in fp.readlines()
+#                     if not r.startswith('#') and not r.startswith('git+')]
+
 
 # Import the README and use it as the long-description.
 # Note: this will only work if 'README.md' is present in your MANIFEST.in file!

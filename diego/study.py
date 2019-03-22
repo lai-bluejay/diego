@@ -1,5 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from typing import Union
+from typing import Type
+from typing import Tuple
+from typing import Set
+from typing import Optional
+from typing import List
+from typing import Dict
+from typing import Callable
+from typing import Any
+from diego.depens import logging
+from diego.preprocessor import AutobinningTransform, LocalUncertaintySampling
+from diego.trials import Trial
+from diego import trials as trial_module
+from diego import basic
+from diego.core import Storage
 """
 diego/study.py was created on 2019/03/21.
 file in :relativeFile
@@ -27,24 +42,6 @@ sys.path.append("%s/.." % root)
 sys.path.append("%s/../../.." % root)
 sys.path.append(u"{0:s}".format(root))
 
-
-from diego.core import Storage
-from diego import basic
-
-from diego import trials as trial_module
-from diego.trials import Trial
-from diego.preprocessor import AutobinningTransform, LocalUncertaintySampling
-from diego.depens import logging
-
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Set
-from typing import Tuple
-from typing import Type
-from typing import Union
 
 ObjectiveFuncType = Callable[[trial_module.Trial], float]
 
@@ -85,7 +82,6 @@ class Study(object):
             self.sampler = None
 
         self.study_id = self.storage.get_study_id_from_name(study_name)
-        self.trials_list = trials_list
         self.logger = logging.get_logger(__name__)
 
     def __getstate__(self):
@@ -124,8 +120,11 @@ class Study(object):
         Returns:
         """
         bt = self.storage.get_best_trial(self.study_id)
-        print(bt)
         return bt
+
+    @property
+    def all_trials(self):
+        return self.storage.get_all_trials(self.study_id)
 
     @property
     def direction(self):
@@ -202,19 +201,18 @@ class Study(object):
                 by this logic.
 
         """
-        ttrials = self.trials_list
-        
+        ttrials = self.storage.trials
+
         X_test, y_test = check_X_y(X_test, y_test)
         self.storage.set_test_storage(X_test, y_test)
         if ttrials is None or ttrials == []:
             self.logger.warning('no trials, init by default params.')
             ttrials = self._init_trials()
             print(self.storage.trials)
-        self.trials_list = ttrials
         if n_jobs == 1:
-            self._optimize_sequential(self.trials_list, timeout, catch)
+            self._optimize_sequential(ttrials, timeout, catch)
         else:
-            self._optimize_parallel(self.trials_list, timeout, n_jobs, catch)
+            self._optimize_parallel(ttrials, timeout, n_jobs, catch)
 
     def set_user_attr(self, key, value):
         # type: (str, Any) -> None
@@ -523,8 +521,10 @@ def create_study(X, y,
                  storage=None,  # type: Union[None, str, storages.BaseStorage]
                  sample_method='lus',
                  study_name=None,  # type: Optional[str]
-                 direction='minimize',  # type: str
+                 direction='maximize',  # type: str
                  load_cache=False,  # type: bool
+                 sample_params=dict(),
+                 trials_list=list()
                  ):
     # type: (...) -> Study
     """Create a new :class:`~diego.study.Study`.
@@ -582,8 +582,7 @@ def create_study(X, y,
 def load_study(
         study_name,  # type: str
         storage,  # type: Union[str, storages.BaseStorage]
-        sampler=None,  # type: samplers.BaseSampler
-        pruner=None,  # type: pruners.BasePruner
+
 ):
     # type: (...) -> Study
     """Load the existing :class:`~diego.study.Study` that has the specified name.
@@ -596,18 +595,9 @@ def load_study(
             <https://www.sqlalchemy.org/>`_ to handle databases. Please refer to `SQLAlchemy's
             document <https://docs.sqlalchemy.org/en/latest/core/engines.html#database-urls>`_ for
             further details.
-        sampler:
-            A sampler object that implements background algorithm for value suggestion.
-            If :obj:`None` is specified, :class:`~diego.samplers.TPESampler` is used
-            as the default. See also :class:`~diego.samplers`.
-        pruner:
-            A pruner object that decides early stopping of unpromising trials.
-            If :obj:`None` is specified, :class:`~diego.pruners.MedianPruner` is used
-            as the default. See also :class:`~diego.pruners`.
-
     """
 
-    return Study(study_name=study_name, storage=storage, sampler=sampler, pruner=pruner)
+    return Study(study_name=study_name, storage=storage)
 
 
 def get_all_study_summaries(storage):
@@ -625,6 +615,3 @@ def get_all_study_summaries(storage):
 
     storage = get_storage(storage)
     return storage.get_all_study_summaries()
-
-
-
