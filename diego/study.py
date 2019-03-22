@@ -10,9 +10,12 @@ from typing import Dict
 from typing import Callable
 from typing import Any
 
-from sklearn.pipeline import make_pipeline
+from collections import defaultdict
+
+
+from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.utils import validation
-from sklearn.externals import joblib
+from sklearn.externals import joblib, six
 
 from diego.depens import logging
 from diego.preprocessor import AutobinningTransform, LocalUncertaintySampling
@@ -39,17 +42,31 @@ import time
 from sklearn.utils import check_X_y
 from autosklearn.classification import AutoSklearnClassifier
 from tpot import TPOTClassifier
-import os
-import sys
-root = os.path.dirname(os.path.abspath(__file__))
-sys.path.append("%s/../.." % root)
-sys.path.append("%s/.." % root)
-sys.path.append("%s/../../.." % root)
-sys.path.append(u"{0:s}".format(root))
+
 
 
 ObjectiveFuncType = Callable[[trial_module.Trial], float]
 
+
+def _name_estimators(estimators):
+    """Generate names for estimators."""
+
+    names = [type(estimator).__name__.lower() for estimator in estimators]
+    namecount = defaultdict(int)
+    for est, name in zip(estimators, names):
+        namecount[name] += 1
+
+    for k, v in list(six.iteritems(namecount)):
+        if v == 1:
+            del namecount[k]
+
+    for i in reversed(range(len(estimators))):
+        name = names[i]
+        if name in namecount:
+            names[i] += "-%d" % namecount[name]
+            namecount[name] -= 1
+
+    return list(zip(names, estimators))
 
 class Study(object):
     """
@@ -96,7 +113,7 @@ class Study(object):
             self.binner = AutobinningTransform()
         self.study_id = self.storage.get_study_id_from_name(study_name)
         self.logger = logging.get_logger(__name__)
-        
+        self.trail_list = []
         #export model. should be joblib.Memory object
         self.pipeline = None
         self.export_model_path = export_model_path
@@ -224,7 +241,7 @@ class Study(object):
                 by this logic.
 
         """
-        ttrials = self.storage.trials
+        
 
         X_test, y_test = check_X_y(X_test, y_test)
         self.storage.set_test_storage(X_test, y_test)
@@ -241,18 +258,16 @@ class Study(object):
             self.storage.set_test_storage(X_test, y_test)
             self._pipe_add(['binning', self.binner])
         
-        if ttrials is None or ttrials == []:
+        if self.trail_list is None or self.trail_list == []:
             self.logger.warning('no trials, init by default params.')
-            ttrials = self._init_trials()
-            print(self.storage.trials)
+            self.trail_list = self._init_trials()
         if n_jobs == 1:
-            self._optimize_sequential(ttrials, timeout, catch)
+            self._optimize_sequential(self.trail_list, timeout, catch)
         else:
-            self._optimize_parallel(ttrials, timeout, n_jobs, catch)
+            self._optimize_parallel(self.trail_list, timeout, n_jobs, catch)
 
         self._pipe_add(['best_trial', self.best_trial.clf])
-        if self.export_model_path:
-            joblib.dump()
+        self._export_model(self.export_model_path)
 
     def set_user_attr(self, key, value):
         # type: (str, Any) -> None
@@ -540,7 +555,7 @@ class Study(object):
                          'Current best value is {}.'.format(
                              trial_number, value, self.best_value))
 
-    def _pipe_add(self, step:list):
+    def _pipe_add(self, step):
         """add steps to Study.pipeline
         
         Arguments:
@@ -548,13 +563,26 @@ class Study(object):
         """
 
         if isinstance(step, list):
-            step = step
+            if step is not None and not hasattr(step, "fit"):
+                raise TypeError("Last step of Pipeline should implement fit. "
+                            "'%s' (type %s) doesn't"
+                            % (step, type(step)))
+            if isinstance(step, Pipeline) and self.pipeline is None:
+                self.pipeline = step
+                return
         else:
-            step = ['unnamed step', step]
+            pass
         if self.pipeline is None:
             self.pipeline = make_pipeline(step)
         else:
-            self.pipeline.steps.append(step)
+            steps = _name_estimators([step])
+            self.pipeline.steps += steps
+    
+    def _export_model(self, export_model_path):
+        if export_model_path is None:
+            model_name = 'diego_model_' + str(self.study_name) + '.joblib'
+            export_model_path = '/tmp/'+model_name
+        joblib.dump(self.pipeline, export_model_path)
 
 
 def create_trial(study: Study):

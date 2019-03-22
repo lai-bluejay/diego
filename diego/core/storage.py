@@ -155,7 +155,6 @@ class InMemoryStorage(object):
 
         all_trials = self.get_all_trials(study_id)
         all_trials = [t for t in all_trials if t.state is basic.TrialState.COMPLETE]
-        print(all_trials)
         if len(all_trials) == 0:
             raise ValueError('No trials are completed yet.')
 
