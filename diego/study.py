@@ -250,7 +250,7 @@ class Study(object):
             X_test = self.binner.transform(X_test)
             self.storage.set_train_storage(X_train, self.storage.y_train)
             self.storage.set_test_storage(X_test, y_test)
-            self._pipe_add(['binning', self.binner])
+            self._pipe_add(self.binner)
         
         if self.trail_list is None or self.trail_list == []:
             self.logger.warning('no trials, init by default params.')
@@ -260,7 +260,7 @@ class Study(object):
         else:
             self._optimize_parallel(self.trail_list, timeout, n_jobs, catch)
 
-        self._pipe_add(['best_trial', self.best_trial.clf])
+        self._pipe_add(self.best_trial.clf)
         self._export_model(self.export_model_path)
 
     def set_user_attr(self, key, value):
@@ -576,7 +576,7 @@ class Study(object):
             self.pipeline.steps += steps
     
     def _export_model(self, export_model_path):
-        if export_model_path is None:
+        if export_model_path is None or export_model_path== '':
             return
             # export_model_path = '/tmp/'+model_name
         model_name = 'diego_model_' + str(self.study_name) + '.joblib'
