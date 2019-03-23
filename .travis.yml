@@ -6,6 +6,9 @@ git:
 python: 
   - '3.6'
 
+env:
+  CODECOV_TOKEN="1f0199b3-9fa2-4c61-8d74-d008e29c1395"
+
 before_install:
 
   # Here we just install Miniconda, which you shouldn't have to change.
@@ -13,8 +16,10 @@ before_install:
   - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - chmod +x miniconda.sh
   - ./miniconda.sh -b
+  - pwd
   - export PATH=/home/travis/miniconda3/bin:$PATH
   - conda update --yes conda
+
 
 install:
 
@@ -36,7 +41,11 @@ install:
 
   # - pip install ...
   # if some package depends on numpy, Numpy should be installed with conda.
+  - pip install codecov
   - pip install -r requirements.txt
 
 script:
   - python examples/test_simlpe_study.py
+
+after_success:
+  - codecov
