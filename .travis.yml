@@ -10,10 +10,14 @@ before_install:
 
   # Here we just install Miniconda, which you shouldn't have to change.
 
-  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - chmod +x miniconda.sh
   - ./miniconda.sh -b
-  - export PATH=/home/travis/miniconda/bin:$PATH
+  - echo $PATH
+  - cat ~/.bashrc
+  - cat ~/.bash_profile
+  - pwd
+  - export PATH=~/miniconda/bin:$PATH
   - conda update --yes conda
 
 install:
