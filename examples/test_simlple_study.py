@@ -14,7 +14,6 @@ sys.path.append("%s/.." % root)
 sys.path.append("%s/../diego" % root)
 sys.path.append("%s/../../.." % root)
 sys.path.append(u"{0:s}".format(root))
-print(sys.path)
 from diego.study import create_study
 
 if __name__ == "__main__":
@@ -26,6 +25,3 @@ if __name__ == "__main__":
     s = create_study(X_train, y_train)
     s.generate_autosk_trial(mode='fast')
     s.optimize(X_test, y_test)
-    for t in s.trials_list:
-        print(t.__dict__)
-        print(t.clf.score(X_test, y_test))

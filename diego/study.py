@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+diego/study.py was created on 2019/03/21.
+file in :relativeFile
+Author: Charles_Lai
+Email: lai.bluejay@gmail.com
+"""
 from typing import Union
 from typing import Type
 from typing import Tuple
@@ -12,7 +18,6 @@ from typing import Any
 
 from collections import defaultdict
 
-
 from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.utils import validation
 from sklearn.externals import joblib, six
@@ -23,12 +28,6 @@ from diego.trials import Trial
 from diego import trials as trial_module
 from diego import basic
 from diego.core import Storage
-"""
-diego/study.py was created on 2019/03/21.
-file in :relativeFile
-Author: Charles_Lai
-Email: lai.bluejay@gmail.com
-"""
 
 import collections
 import datetime
@@ -43,10 +42,7 @@ from sklearn.utils import check_X_y
 from autosklearn.classification import AutoSklearnClassifier
 from tpot import TPOTClassifier
 
-
-
 ObjectiveFuncType = Callable[[trial_module.Trial], float]
-
 
 def _name_estimators(estimators):
     """Generate names for estimators."""
@@ -241,8 +237,6 @@ class Study(object):
                 by this logic.
 
         """
-        
-
         X_test, y_test = check_X_y(X_test, y_test)
         self.storage.set_test_storage(X_test, y_test)
         # TODO Preprocess Trial
@@ -373,9 +367,10 @@ class Study(object):
             new_trial = self.generate_autosk_trial(mode)
         elif ttype == 'tpot':
             new_trial = self.generate_tpot_trial(mode)
-
+        # self.trail_list.append(new_trial)
         return new_trial
 
+    # TODO decorator, add trials to pipeline.
     def generate_autosk_trial(self, mode='fast', **kwargs):
         auto_sklearn_trial = create_trial(self)
         if mode == 'fast':
@@ -387,6 +382,7 @@ class Study(object):
             autosk_clf = AutoSklearnClassifier(ensemble_size=50, ensemble_nbest=30,
                                                ml_memory_limit=10240, ensemble_memory_limit=4096, time_left_for_this_task=14400, per_run_time_limit=1440,)
         auto_sklearn_trial.clf = autosk_clf
+        self.trail_list.append(auto_sklearn_trial)
         return auto_sklearn_trial
 
     def generate_tpot_trial(self, mode='fast', **kwargs):
@@ -402,6 +398,7 @@ class Study(object):
             tpot_clf = TPOTClassifier(generations=50, population_size=100,
                                       verbosity=2, scoring='accuracy', n_jobs=-1, max_eval_time_mins=60, early_stop=30)
         tpot_trial.clf = tpot_clf
+        self.trail_list.append(tpot_clf)
         return tpot_trial
 
     def _init_trials(self, metrics='roc_auc'):
@@ -517,7 +514,7 @@ class Study(object):
 
         try:
             # result = float(result)
-            print('Trial was done', trial.number)
+            self.logger.info('Trial was done', trial.number)
         except (
                 ValueError,
                 TypeError,
@@ -580,16 +577,16 @@ class Study(object):
     
     def _export_model(self, export_model_path):
         if export_model_path is None:
-            model_name = 'diego_model_' + str(self.study_name) + '.joblib'
-            export_model_path = '/tmp/'+model_name
+            return
+            # export_model_path = '/tmp/'+model_name
+        model_name = 'diego_model_' + str(self.study_name) + '.joblib'
+        export_model_path = export_model_path + model_name
         joblib.dump(self.pipeline, export_model_path)
-
 
 def create_trial(study: Study):
     trial_id = study.storage.create_new_trial_id(study.study_id)
     trial = Trial(study, trial_id)
     return trial
-
 
 def get_storage(storage):
     # type: (Union[None, str, BaseStorage]) -> BaseStorage
@@ -598,7 +595,6 @@ def get_storage(storage):
         return Storage()
     else:
         return storage
-
 
 def create_study(X, y,
                  storage=None,  # type: Union[None, str, storages.BaseStorage]
@@ -661,7 +657,6 @@ def create_study(X, y,
 
     return study
 
-
 def load_study(
         study_name,  # type: str
         storage,  # type: Union[str, storages.BaseStorage]
@@ -681,7 +676,6 @@ def load_study(
     """
 
     return Study(study_name=study_name, storage=storage)
-
 
 def get_all_study_summaries(storage):
     # type: (Union[str, storages.BaseStorage]) -> List[basic.StudySummary]
