@@ -2,6 +2,8 @@
 
 Diego: Data in, IntElliGence Out. Sprite Come from [Fast.ai](https://github.com/fastai/fastai) and [MicroSoft nni](https://github.com/Microsoft/nni).
 
+[![Build Status](https://travis-ci.org/lai-bluejay/diego.svg?branch=master)](https://travis-ci.org/lai-bluejay/diego)
+
 ## Installation
 
 需要先安装swig，部分依赖C/C++的接口编译。推荐使用 conda 安装

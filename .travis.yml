@@ -1,0 +1,15 @@
+sudo: required
+language: python
+git:
+  depth: 3
+  quiet: true
+python: 
+  - '3.6'
+  - '3.7'
+
+install:
+  - conda install swig
+  - pip install -r requirements.txt
+
+script:
+  - python examples/test_simlpe_study.py
