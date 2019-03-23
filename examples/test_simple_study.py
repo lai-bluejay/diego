@@ -23,5 +23,5 @@ if __name__ == "__main__":
                                                                                 train_size=0.75, test_size=0.25)
 
     s = create_study(X_train, y_train)
-    s.generate_autosk_trial(mode='fast')
+    s.generate_tpot_trial(mode='test')
     s.optimize(X_test, y_test)

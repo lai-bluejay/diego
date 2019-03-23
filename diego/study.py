@@ -392,6 +392,8 @@ class Study(object):
         if mode == 'fast':
             tpot_clf = TPOTClassifier(generations=5, population_size=10,
                                       verbosity=2, n_jobs=-1, max_eval_time_mins=10, early_stop=5)
+        elif mode == 'test':
+            tpot_clf = TPOTClassifier(generations=2, population_size=10, n_jobs=-1, verbosity=1)
         elif mode == 'self-define':
             tpot_clf = TPOTClassifier(**kwargs)
         else:
