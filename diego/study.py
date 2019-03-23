@@ -400,7 +400,7 @@ class Study(object):
             tpot_clf = TPOTClassifier(generations=50, population_size=100,
                                       verbosity=2, scoring='accuracy', n_jobs=-1, max_eval_time_mins=60, early_stop=30)
         tpot_trial.clf = tpot_clf
-        self.trail_list.append(tpot_clf)
+        self.trail_list.append(tpot_trial)
         return tpot_trial
 
     def _init_trials(self, metrics='roc_auc'):
