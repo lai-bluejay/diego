@@ -3,6 +3,9 @@
 Diego: Data in, IntElliGence Out. Sprite Come from [Fast.ai](https://github.com/fastai/fastai) and [MicroSoft nni](https://github.com/Microsoft/nni).
 
 [![Build Status](https://travis-ci.org/lai-bluejay/diego.svg?branch=master)](https://travis-ci.org/lai-bluejay/diego)
+![PyPI](https://img.shields.io/pypi/v/diego.svg?style=flat)
+![GitHub](https://img.shields.io/github/license/lai-bluejay/diego.svg)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/lai-bluejay/diego.svg)
 
 ## Installation
 
