@@ -6,9 +6,6 @@ git:
 python: 
   - '3.6'
 
-env:
-  CODECOV_TOKEN="1f0199b3-9fa2-4c61-8d74-d008e29c1395"
-
 before_install:
 
   # Here we just install Miniconda, which you shouldn't have to change.
@@ -45,6 +42,3 @@ install:
 
 script:
   - python examples/test_simple_study.py
-
-after_success:
-  - codecov
