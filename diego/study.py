@@ -352,57 +352,6 @@ class Study(object):
 
         return pd.DataFrame(records, columns=pd.MultiIndex.from_tuples(columns))
 
-    def generate_trials(self, mode='fast', ttype=None):
-        """generate simple trials
-
-        Keyword Arguments:
-            mode {str} -- [description] (default: {'fast'})
-            ttype {[type]} -- [description] (default: {None})
-        """
-
-        import random
-        if not ttype:
-            ttype = random.choice(['autosk', 'tpot'])
-        if ttype == 'autosk':
-            new_trial = self.generate_autosk_trial(mode)
-        elif ttype == 'tpot':
-            new_trial = self.generate_tpot_trial(mode)
-        # self.trail_list.append(new_trial)
-        return new_trial
-
-    # TODO decorator, add trials to pipeline.
-    def generate_autosk_trial(self, mode='fast', **kwargs):
-        auto_sklearn_trial = create_trial(self)
-        if mode == 'fast':
-            autosk_clf = AutoSklearnClassifier(
-                time_left_for_this_task=120, per_run_time_limit=30, )
-        elif mode == 'self-define':
-            autosk_clf = AutoSklearnClassifier(**kwargs)
-        else:
-            autosk_clf = AutoSklearnClassifier(ensemble_size=50, ensemble_nbest=30,
-                                               ml_memory_limit=10240, ensemble_memory_limit=4096, time_left_for_this_task=14400, per_run_time_limit=1440,)
-        auto_sklearn_trial.clf = autosk_clf
-        self.trail_list.append(auto_sklearn_trial)
-        return auto_sklearn_trial
-
-    def generate_tpot_trial(self, mode='fast', **kwargs):
-        tpot_trial = create_trial(self)
-        # ref: http://epistasislab.github.io/tpot/api/
-        # TPOT will evaluate population_size + generations × offspring_size pipelines in total.
-        if mode == 'fast':
-            tpot_clf = TPOTClassifier(generations=5, population_size=10,
-                                      verbosity=2, n_jobs=-1, max_eval_time_mins=10, early_stop=5)
-        elif mode == 'test':
-            tpot_clf = TPOTClassifier(generations=2, population_size=10, n_jobs=-1, verbosity=1)
-        elif mode == 'self-define':
-            tpot_clf = TPOTClassifier(**kwargs)
-        else:
-            tpot_clf = TPOTClassifier(generations=50, population_size=100,
-                                      verbosity=2, scoring='accuracy', n_jobs=-1, max_eval_time_mins=60, early_stop=30)
-        tpot_trial.clf = tpot_clf
-        self.trail_list.append(tpot_trial)
-        return tpot_trial
-
     def _init_trials(self, metrics='roc_auc'):
 
         auto_sklearn_trial = self.generate_autosk_trial()
@@ -546,6 +495,78 @@ class Study(object):
         self._log_completed_trial(trial_number, result)
 
         return trial
+    
+    def _run_proprecess_trial(self, trial, catch):
+        # TODO Preprocess Trial
+        X_train, y_train = self.storage.X_train, self.storage.y_train
+        X_train, y_train = trial.clf.fit_transform(X_train, y_train)
+        self.storage.set_train_storage(X_train, y_train)
+        ## whether to do in Test set  and add to Study.pipeline
+        if self.sample_method == 'lus':
+            X_train, y_train = self.storage.X_train, self.storage.y_train
+            X_train, y_train = self.sampler.fit_transform(X_train, y_train)
+            self.storage.set_train_storage(X_train, y_train)
+        if self.is_autobin:
+            self.binner.fit(self.storage.X_train, self.storage.y_train)
+            X_train = self.binner.transform(self.storage.X_train)
+            X_test = self.binner.transform(X_test)
+            self.storage.set_train_storage(X_train, self.storage.y_train)
+            self.storage.set_test_storage(X_test, y_test)
+            self._pipe_add(self.binner)
+        
+        trial_number = trial.number
+
+        try:
+            trial.clf.fit(self.storage.X_train, self.storage.y_train)
+            result = trial.clf.score(self.storage.X_test, self.storage.y_test)
+        # except basic.TrialPruned as e:
+            # message = 'Setting status of trial#{} as {}. {}'.format(trial_number,
+            #                                                         basic.TrialState.PRUNED,
+            #                                                         str(e))
+            # self.logger.info(message)
+            # self.storage.set_trial_state(trial_id, basic.TrialState.PRUNED)
+            # return trial
+        except catch as e:
+            message = 'Setting status of trial#{} as {} because of the following error: {}'\
+                .format(trial_number, basic.TrialState.FAIL, repr(e))
+            self.logger.warning(message, exc_info=True)
+            self.storage.set_trial_state(trial_number, basic.TrialState.FAIL)
+            self.storage.set_trial_system_attr(
+                trial_number, 'fail_reason', message)
+            return trial
+
+        try:
+            # result = float(result)
+            self.logger.info('Trial was done', trial.number)
+        except (
+                ValueError,
+                TypeError,
+        ):
+            message = 'Setting status of trial#{} as {} because the returned value from the ' \
+                      'objective function cannot be casted to float. Returned value is: ' \
+                      '{}'.format(
+                          trial_number, basic.TrialState.FAIL, repr(result))
+            self.logger.warning(message)
+            self.storage.set_trial_state(trial_number, basic.TrialState.FAIL)
+            self.storage.set_trial_system_attr(
+                trial_number, 'fail_reason', message)
+            return trial
+
+        if math.isnan(result):
+            message = 'Setting status of trial#{} as {} because the objective function ' \
+                      'returned {}.'.format(
+                          trial_number, basic.TrialState.FAIL, result)
+            self.logger.warning(message)
+            self.storage.set_trial_state(trial_number, basic.TrialState.FAIL)
+            self.storage.set_trial_system_attr(
+                trial_number, 'fail_reason', message)
+            return trial
+
+        trial.report(result)
+        self.storage.set_trial_state(trial_number, basic.TrialState.COMPLETE)
+        self._log_completed_trial(trial_number, result)
+
+        return trial
 
     def _log_completed_trial(self, trial_number, value):
         # type: (int, float) -> None
@@ -584,6 +605,78 @@ class Study(object):
         model_name = 'diego_model_' + str(self.study_name) + '.joblib'
         export_model_path = export_model_path + model_name
         joblib.dump(self.pipeline, export_model_path)
+
+    def generate_preprocessor_trials(self, mode='fast', ttype=None):
+        """generate simple trials
+
+        Keyword Arguments:
+            mode {str} -- [description] (default: {'fast'})
+            ttype {[type]} -- [description] (default: {None})
+        """
+
+        import random
+        preprocessor_trial = create_trial(self)
+        
+        # self.trail_list.append(new_trial)
+        return preprocessor_trial
+
+    def generate_trials(self, mode='fast', ttype=None):
+        """generate simple trials
+
+        Keyword Arguments:
+            mode {str} -- [description] (default: {'fast'})
+            ttype {[type]} -- [description] (default: {None})
+        """
+
+        import random
+        if not ttype:
+            ttype = random.choice(['autosk', 'tpot'])
+        if ttype == 'autosk':
+            new_trial = self.generate_autosk_trial(mode)
+        elif ttype == 'tpot':
+            new_trial = self.generate_tpot_trial(mode)
+        # self.trail_list.append(new_trial)
+        return new_trial
+
+    # TODO decorator, add trials to pipeline.
+    def generate_autosk_trial(self, mode='fast', **kwargs):
+        auto_sklearn_trial = create_trial(self)
+        if mode == 'fast':
+            autosk_clf = AutoSklearnClassifier(
+                time_left_for_this_task=120, per_run_time_limit=30, )
+        elif mode == 'self-define':
+            autosk_clf = AutoSklearnClassifier(**kwargs)
+        else:
+            autosk_clf = AutoSklearnClassifier(ensemble_size=50, ensemble_nbest=30,
+                                               ml_memory_limit=10240, ensemble_memory_limit=4096, time_left_for_this_task=14400, per_run_time_limit=1440,)
+        auto_sklearn_trial.clf = autosk_clf
+        self.trail_list.append(auto_sklearn_trial)
+        return auto_sklearn_trial
+
+    def generate_tpot_trial(self, mode='fast', **kwargs):
+        tpot_trial = create_trial(self)
+        # ref: http://epistasislab.github.io/tpot/api/
+        # TPOT will evaluate population_size + generations × offspring_size pipelines in total.
+        if mode == 'fast':
+            tpot_clf = TPOTClassifier(generations=5, population_size=10,
+                                      verbosity=2, n_jobs=-1, max_eval_time_mins=10, early_stop=5)
+        elif mode == 'test':
+            tpot_clf = TPOTClassifier(generations=2, population_size=10, n_jobs=-1, verbosity=1)
+        elif mode == 'self-define':
+            tpot_clf = TPOTClassifier(**kwargs)
+        else:
+            tpot_clf = TPOTClassifier(generations=50, population_size=100,
+                                      verbosity=2, scoring='accuracy', n_jobs=-1, max_eval_time_mins=60, early_stop=30)
+        tpot_trial.clf = tpot_clf
+        self.trail_list.append(tpot_trial)
+        return tpot_trial
+
+    def add_preprocessor_trial(self, trial):
+        pass
+
+
+
+
 
 def create_trial(study: Study):
     trial_id = study.storage.create_new_trial_id(study.study_id)

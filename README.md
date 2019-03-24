@@ -1,30 +1,41 @@
+
 # Diego
 
-Diego: Data in, IntElliGence Out. Sprite Come from [Fast.ai](https://github.com/fastai/fastai) and [MicroSoft nni](https://github.com/Microsoft/nni).
+Diego: Data in,  IntElliGence Out.
+
+[简体中文](README_zh_CN.md)
+
+A fast framework that supports the rapid construction of automated learning tasks. Simply create an automated learning study (`Study`) and generate correlated trials (`Trial`). Then run the code and get a machine learning model. Implemented using Scikit-learn API [glossary](https://scikit-learn.org/stable/glossary.html), using Bayesian optimization and genetic algorithms for automated machine learning.
+
+Sprite Come from [Fast.ai](https://github.com/fastai/fastai) and [MicroSoft nni](https://github.com/Microsoft/nni).
 
 [![Build Status](https://travis-ci.org/lai-bluejay/diego.svg?branch=master)](https://travis-ci.org/lai-bluejay/diego)
 ![PyPI](https://img.shields.io/pypi/v/diego.svg?style=flat)
 ![GitHub](https://img.shields.io/github/license/lai-bluejay/diego.svg)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/lai-bluejay/diego.svg)
 
+- [x] the classifier trained by a Study.
+- [x] AutoML classifier with support for scikit-learn api. Support for exporting models and use them directly.
+- [x] Hyperparametric optimization using Bayesian optimization and genetic algorithms
+- [x] Supports bucketing/binning algorithm and LUS sampling method for preprocessing
+- [ ] Supports scikit-learn api classifier custom classifier for parameter search and super parameter optimization
+
+
 ## Installation
 
-需要先安装swig，部分依赖C/C++的接口编译。推荐使用 conda 安装
+You need to install swig first, and some rely on C/C++ interface compilation. Recommended to use conda installation
 
 ```shell
 conda install swig
 pip install diego
 ```
 
-安装好之后，开始6行代码解决一个分类问题吧。
+After installation, start with 6 lines of code to solve a machine learning classification problem.
 
-## 模块结构
+## Usage
 
-### study, trials
-
-参考[MicroSoft nni](https://github.com/Microsoft/nni)，定义`Study`和`Trial`。
-每次的任务认为是一个`Study`，每个 Study 由多个`Trial`构成。
-建议先创建 Study，再从 Study 中生成 Trial:
+Each task is considered to be a `Study`, and each Study consists of multiple `Trial`.
+It is recommended to create a Study first and then generate a Trial from the Study:
 
 ```python
 from diego.study import create_study
@@ -45,10 +56,34 @@ s.optimize(X_test, y_test)
 
 ```
 
+## RoadMap
+ideas for releases in the future
+- [ ] 回归。
+- [ ] add documents.
+- [ ] 不同类型的Trial。TPE， BayesOpt， RandomSearch
+- [ ] 自定义的Trial。Trials by custom Classifier (like sklearn, xgboost)
+- [ ] 模型保存。model persistence
+- [ ] 模型输出。model output
+- [ ] basic Classifier
+- [ ] fix mac os hanged in optimize pipeline
+- [ ] add preprocessor
+- [ ] add FeatureTools for automated feature engineering
+
+
+## 
+
+## Project Structure
+
+### study, trials
+Study: 
+
+Trial:
+
 ### 如果在OS X或者Linux多进程被 hang/crash/freeze
 
-由于在并行化的时候，n_jobs>1可能会卡住。在[scikit-learn中，同样可能出现类似的问题](https://scikit-learn.org/stable/faq.html#why-do-i-sometime-get-a-crash-freeze-with-n-jobs-1-under-osx-or-linux)
-在Python3.4+中，一种解决方案是，直接配置`multiprocessing`使用`forkserver` 或 `spawn`来启动进程池管理 (而不是默认的`fork`)。例如直接在代码中全局启用`forkserver`模式。
+Since n_jobs>1 may get stuck during parallelization. Similar problems may occur in [scikit-learn] (https://scikit-learn.org/stable/faq.html#why-do-i-sometime-get-a-crash-freeze-with-n -jobs-1-under-osx-or-linux)
+
+In Python 3.4+, one solution is to directly configure `multiprocessing` to use `forkserver` or `spawn` to start process pool management (instead of the default `fork`). For example, the `forkserver` mode is enabled globally directly in the code.
 
 ```python
 import multiprocessing
@@ -59,17 +94,17 @@ if __name__ == '__main__':
     # call scikit-learn utils with n_jobs > 1 here
 ```
 
-更多设置可以参考[multiprocessing document](https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods)
+more info :[multiprocessing document](https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods)
 
 ### core
 
 #### storage
 
-对于每次的Study，数据的存储和参数，以及模型是额外存在`Storage`对象的，保证了Study只控制trials，同时每个Trial完成后更新在storage中的结果，同时更新最好的结果。
+For each study, the data storage and parameters, and the model is additionally stored in the `Storage` object, which ensures that Study only controls trials, and each Trial updates the results in the storage after updating, and updates the best results.
 
-#### 结果的更新
+#### update result
 
-在创建`Study`的时候，需要指定优化的方向 `maximize` 或者 `minimize`。同时在创建`Trials`的时候，指定优化的指标。默认是 `maximize accuracy`。
+When creating `Study`, you need to specify the direction of optimization `maximize` or `minimize`. Also specify the metrics for optimization when creating `Trials`. The default is `maximize accuracy`.
 
 ## auto ml 补完计划
 
@@ -107,14 +142,3 @@ if __name__ == '__main__':
 
 ### TODO 文档更新。
 
-### features TODO
-
-- [ ] 回归。
-- [ ] 不同类型的Trial。TPE， BayesOpt， RandomSearch
-- [ ] 自定义的Trial。Trials by custom Classifier (like sklearn, xgboost)
-- [ ] 模型保存。model persistence
-- [ ] 模型输出。model output
-- [ ] basic Classifier
-- [ ] fix mac os hanged in optimize pipeline
-- [ ] add preprocessor
-- [ ] add FeatureTools for automated feature engineering

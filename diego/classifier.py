@@ -149,3 +149,36 @@ class DiegoClassifier(BaseAutoML):
                     output_predicted_indexes)
 
             return predicted_classes
+
+    def extend_classifier(self):
+        pass
+
+    @staticmethod
+    def get_properties(dataset_properties=None):
+        return {'shortname': 'AutoBinning',
+                'name': 'Auto Binning for linear model',
+                'handles_regression': False,
+                'handles_classification': True,
+                'handles_multiclass': False,
+                'handles_multilabel': False,
+                'is_deterministic': True,
+                'input': (DENSE, UNSIGNED_DATA, SIGNED_DATA),
+                'output': (DENSE, UNSIGNED_DATA, SIGNED_DATA)}
+
+    @staticmethod
+    def get_hyperparameter_search_space(dataset_properties=None):
+        # TODO add hyperparameter to gbdt binning
+        cs = ConfigurationSpace()
+        binning_method = CategoricalHyperparameter(
+        )
+        # shrinkage = UniformFloatHyperparameter(
+        #     name="shrinkage", lower=0.0, upper=1.0, default_value=0.5
+        # )
+        # n_components = UniformIntegerHyperparameter(
+        #     name="n_components", lower=1, upper=29, default_value=10
+        # )
+        # tol = UniformFloatHyperparameter(
+        #     name="tol", lower=0.0001, upper=1, default_value=0.0001
+        # )
+        cs.add_hyperparameters([binning_method])
+        return cs
