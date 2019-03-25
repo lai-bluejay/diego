@@ -7,7 +7,7 @@ Diego: Data in,  IntElliGence Out.
 
 A fast framework that supports the rapid construction of automated learning tasks. Simply create an automated learning study (`Study`) and generate correlated trials (`Trial`). Then run the code and get a machine learning model. Implemented using Scikit-learn API [glossary](https://scikit-learn.org/stable/glossary.html), using Bayesian optimization and genetic algorithms for automated machine learning.
 
-Sprite Come from [Fast.ai](https://github.com/fastai/fastai) and [MicroSoft nni](https://github.com/Microsoft/nni).
+Inspired by [Fast.ai](https://github.com/fastai/fastai) and [MicroSoft nni](https://github.com/Microsoft/nni).
 
 [![Build Status](https://travis-ci.org/lai-bluejay/diego.svg?branch=master)](https://travis-ci.org/lai-bluejay/diego)
 ![PyPI](https://img.shields.io/pypi/v/diego.svg?style=flat)
