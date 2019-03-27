@@ -759,6 +759,8 @@ def create_study(X, y,
                  study_name=None,  # type: Optional[str]
                  direction='maximize',  # type: str
                  load_cache=False,  # type: bool
+                 is_autobin=False,
+                 bin_params=dict(),
                  sample_params=dict(),
                  trials_list=list(),
                  export_model_path=None,
