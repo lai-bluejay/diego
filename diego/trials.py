@@ -196,7 +196,7 @@ class Trial(BaseTrial):
 
         Note that diego internally uses this method to save system messages such as failure
         reason of trials. Please use :func:`~diego.trial.Trial.set_user_attr` to set users'
-        attributes.
+        attributes. 
 
         Args:
             key:

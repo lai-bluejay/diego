@@ -44,6 +44,7 @@ from tpot import TPOTClassifier
 
 ObjectiveFuncType = Callable[[trial_module.Trial], float]
 
+
 def _name_estimators(estimators):
     """Generate names for estimators."""
 
@@ -63,6 +64,7 @@ def _name_estimators(estimators):
             namecount[name] -= 1
 
     return list(zip(names, estimators))
+
 
 class Study(object):
     """
@@ -109,8 +111,8 @@ class Study(object):
             self.binner = AutobinningTransform()
         self.study_id = self.storage.get_study_id_from_name(study_name)
         self.logger = logging.get_logger(__name__)
-        self.trail_list = []
-        #export model. should be joblib.Memory object
+        self.trial_list = []
+        # export model. should be joblib.Memory object
         self.pipeline = None
         self.export_model_path = export_model_path
 
@@ -131,7 +133,6 @@ class Study(object):
         params = dict()
         params['binning_method'] = 'xgb'
         params['binning_value_type'] = 'woe'
-
 
     @property
     def best_value(self):
@@ -251,15 +252,16 @@ class Study(object):
             self.storage.set_train_storage(X_train, self.storage.y_train)
             self.storage.set_test_storage(X_test, y_test)
             self._pipe_add(self.binner)
-        
-        if self.trail_list is None or self.trail_list == []:
-            self.logger.warning('no trials, init by default params.')
-            self.trail_list = self._init_trials()
-        if n_jobs == 1:
-            self._optimize_sequential(self.trail_list, timeout, catch)
-        else:
-            self._optimize_parallel(self.trail_list, timeout, n_jobs, catch)
 
+        if self.trial_list is None or self.trial_list == []:
+            self.logger.warning('no trials, init by default params.')
+            self.trial_list = self._init_trials(n_jobs)
+        # 当前保证在Trial内进行多进程
+        # if n_jobs == 1:
+        #     self._optimize_sequential(self.trial_list, timeout, catch)
+        # else:
+        #     self._optimize_parallel(self.trial_list, timeout, n_jobs, catch)
+        self._optimize_sequential(self.trial_list, timeout, catch)
         self._pipe_add(self.best_trial.clf)
         self._export_model(self.export_model_path)
 
@@ -352,11 +354,11 @@ class Study(object):
 
         return pd.DataFrame(records, columns=pd.MultiIndex.from_tuples(columns))
 
-    def _init_trials(self, metrics='roc_auc'):
-
+    def _init_trials(self, metrics='roc_auc', n_jobs=1):
+        # tpot耗时较久，舍弃。相同时间内不如auto-sklearn
         auto_sklearn_trial = self.generate_autosk_trial()
-        tpot_trial = self.generate_tpot_trial()
-        return [auto_sklearn_trial, tpot_trial]
+        # tpot_trial = self.generate_tpot_trial()
+        return [auto_sklearn_trial]
 
     def _optimize_sequential(
             self,
@@ -378,7 +380,7 @@ class Study(object):
     # TODO multi clf
     def _optimize_parallel(
             self,
-            trials,  # type: Optional[int]
+            trials,
             timeout,  # type: Optional[float]
             n_jobs,  # type: int
             catch  # type: Union[Tuple[()], Tuple[Type[Exception]]]
@@ -465,7 +467,7 @@ class Study(object):
 
         try:
             # result = float(result)
-            self.logger.info('Trial was done', trial.number)
+            self.logger.info('Trial{} was done'.format(trial.number))
         except (
                 ValueError,
                 TypeError,
@@ -495,13 +497,13 @@ class Study(object):
         self._log_completed_trial(trial_number, result)
 
         return trial
-    
+
     def _run_proprecess_trial(self, trial, catch):
         # TODO Preprocess Trial
         X_train, y_train = self.storage.X_train, self.storage.y_train
         X_train, y_train = trial.clf.fit_transform(X_train, y_train)
         self.storage.set_train_storage(X_train, y_train)
-        ## whether to do in Test set  and add to Study.pipeline
+        # whether to do in Test set  and add to Study.pipeline
         if self.sample_method == 'lus':
             X_train, y_train = self.storage.X_train, self.storage.y_train
             X_train, y_train = self.sampler.fit_transform(X_train, y_train)
@@ -513,7 +515,7 @@ class Study(object):
             self.storage.set_train_storage(X_train, self.storage.y_train)
             self.storage.set_test_storage(X_test, y_test)
             self._pipe_add(self.binner)
-        
+
         trial_number = trial.number
 
         try:
@@ -537,7 +539,7 @@ class Study(object):
 
         try:
             # result = float(result)
-            self.logger.info('Trial was done', trial.number)
+            self.logger.info('Trial{} was done'.format(trial.number))
         except (
                 ValueError,
                 TypeError,
@@ -577,7 +579,7 @@ class Study(object):
 
     def _pipe_add(self, step):
         """add steps to Study.pipeline
-        
+
         Arguments:
             step {[list]} -- ['name', clf]
         """
@@ -585,8 +587,8 @@ class Study(object):
         if isinstance(step, list):
             if step is not None and not hasattr(step, "fit"):
                 raise TypeError("Last step of Pipeline should implement fit. "
-                            "'%s' (type %s) doesn't"
-                            % (step, type(step)))
+                                "'%s' (type %s) doesn't"
+                                % (step, type(step)))
             if isinstance(step, Pipeline) and self.pipeline is None:
                 self.pipeline = step
                 return
@@ -597,9 +599,9 @@ class Study(object):
         else:
             steps = _name_estimators([step])
             self.pipeline.steps += steps
-    
+
     def _export_model(self, export_model_path):
-        if export_model_path is None or export_model_path== '':
+        if export_model_path is None or export_model_path == '':
             return
             # export_model_path = '/tmp/'+model_name
         model_name = 'diego_model_' + str(self.study_name) + '.joblib'
@@ -616,8 +618,7 @@ class Study(object):
 
         import random
         preprocessor_trial = create_trial(self)
-        
-        # self.trail_list.append(new_trial)
+        # self.trial_list.append(new_trial)
         return preprocessor_trial
 
     def generate_trials(self, mode='fast', ttype=None):
@@ -635,22 +636,83 @@ class Study(object):
             new_trial = self.generate_autosk_trial(mode)
         elif ttype == 'tpot':
             new_trial = self.generate_tpot_trial(mode)
-        # self.trail_list.append(new_trial)
+        # self.trial_list.append(new_trial)
         return new_trial
 
     # TODO decorator, add trials to pipeline.
-    def generate_autosk_trial(self, mode='fast', **kwargs):
+    def generate_autosk_trial(self, mode='fast', n_jobs=-1, time_left_for_this_task=3600,
+                              per_run_time_limit=360,
+                              initial_configurations_via_metalearning=25,
+                              ensemble_size: int = 50,
+                              ensemble_nbest=50,
+                              ensemble_memory_limit=4096,
+                              seed=1,
+                              ml_memory_limit=10240,
+                              include_estimators=None,
+                              exclude_estimators=None,
+                              include_preprocessors=None,
+                              exclude_preprocessors=None,
+                              resampling_strategy='holdout',
+                              resampling_strategy_arguments=None,
+                              tmp_folder=None,
+                              output_folder=None,
+                              delete_tmp_folder_after_terminate=True,
+                              delete_output_folder_after_terminate=True,
+                              shared_mode=False,
+                              disable_evaluator_output=False,
+                              get_smac_object_callback=None,
+                              smac_scenario_args=None,
+                              logging_config=None,
+                              metadata_directory=None,):
+        """[summary]
+
+        Keyword Arguments:
+            mode {str} -- [description] (default: {'fast'})
+            n_jobs {int} -- [description] (default: {-1})
+
+        Returns:
+            [type] -- [description]
+        """
+
         auto_sklearn_trial = create_trial(self)
         if mode == 'fast':
-            autosk_clf = AutoSklearnClassifier(
-                time_left_for_this_task=120, per_run_time_limit=30, )
-        elif mode == 'self-define':
-            autosk_clf = AutoSklearnClassifier(**kwargs)
+            time_left_for_this_task=120
+            per_run_time_limit=30
+        elif mode == 'big':
+            ensemble_size=50
+            ensemble_nbest=30
+            ml_memory_limit=10240
+            ensemble_memory_limit=4096
+            time_left_for_this_task=14400
+            per_run_time_limit=1440
         else:
-            autosk_clf = AutoSklearnClassifier(ensemble_size=50, ensemble_nbest=30,
-                                               ml_memory_limit=10240, ensemble_memory_limit=4096, time_left_for_this_task=14400, per_run_time_limit=1440,)
+            pass
+        autosk_clf = AutoSklearnClassifier(n_jobs=n_jobs, time_left_for_this_task=time_left_for_this_task,
+                                               per_run_time_limit=per_run_time_limit,
+                                               initial_configurations_via_metalearning=initial_configurations_via_metalearning,
+                                               ensemble_size=ensemble_size,
+                                               ensemble_nbest=ensemble_nbest,
+                                               ensemble_memory_limit=ensemble_memory_limit,
+                                               seed=seed,
+                                               ml_memory_limit=ml_memory_limit,
+                                               include_estimators=include_estimators,
+                                               exclude_estimators=exclude_estimators,
+                                               include_preprocessors=include_preprocessors,
+                                               exclude_preprocessors=exclude_preprocessors,
+                                               resampling_strategy=resampling_strategy,
+                                               resampling_strategy_arguments=resampling_strategy_arguments,
+                                               tmp_folder=tmp_folder,
+                                               output_folder=output_folder,
+                                               delete_tmp_folder_after_terminate=delete_tmp_folder_after_terminate,
+                                               delete_output_folder_after_terminate=delete_output_folder_after_terminate,
+                                               shared_mode=shared_mode,
+                                               disable_evaluator_output=disable_evaluator_output,
+                                               get_smac_object_callback=get_smac_object_callback,
+                                               smac_scenario_args=smac_scenario_args,
+                                               logging_config=logging_config,
+                                               metadata_directory=metadata_directory)
         auto_sklearn_trial.clf = autosk_clf
-        self.trail_list.append(auto_sklearn_trial)
+        self.trial_list.append(auto_sklearn_trial)
         return auto_sklearn_trial
 
     def generate_tpot_trial(self, mode='fast', **kwargs):
@@ -661,27 +723,26 @@ class Study(object):
             tpot_clf = TPOTClassifier(generations=5, population_size=10,
                                       verbosity=2, n_jobs=-1, max_eval_time_mins=10, early_stop=5)
         elif mode == 'test':
-            tpot_clf = TPOTClassifier(generations=2, population_size=10, n_jobs=-1, verbosity=1)
+            tpot_clf = TPOTClassifier(
+                generations=2, population_size=10, n_jobs=-1, verbosity=1)
         elif mode == 'self-define':
             tpot_clf = TPOTClassifier(**kwargs)
         else:
             tpot_clf = TPOTClassifier(generations=50, population_size=100,
                                       verbosity=2, scoring='accuracy', n_jobs=-1, max_eval_time_mins=60, early_stop=30)
         tpot_trial.clf = tpot_clf
-        self.trail_list.append(tpot_trial)
+        self.trial_list.append(tpot_trial)
         return tpot_trial
 
     def add_preprocessor_trial(self, trial):
         pass
 
 
-
-
-
 def create_trial(study: Study):
     trial_id = study.storage.create_new_trial_id(study.study_id)
     trial = Trial(study, trial_id)
     return trial
+
 
 def get_storage(storage):
     # type: (Union[None, str, BaseStorage]) -> BaseStorage
@@ -691,6 +752,7 @@ def get_storage(storage):
     else:
         return storage
 
+
 def create_study(X, y,
                  storage=None,  # type: Union[None, str, storages.BaseStorage]
                  sample_method='lus',
@@ -698,7 +760,8 @@ def create_study(X, y,
                  direction='maximize',  # type: str
                  load_cache=False,  # type: bool
                  sample_params=dict(),
-                 trials_list=list()
+                 trials_list=list(),
+                 export_model_path=None,
                  ):
     # type: (...) -> Study
     """Create a new :class:`~diego.study.Study`.
@@ -737,7 +800,8 @@ def create_study(X, y,
     study = Study(
         study_name=study_name,
         storage=storage,
-        sample_method=sample_method)
+        sample_method=sample_method,
+        export_model_path=export_model_path)
 
     if direction == 'minimize':
         _direction = basic.StudyDirection.MINIMIZE
@@ -751,6 +815,7 @@ def create_study(X, y,
     study.storage.set_train_storage(X, y)
 
     return study
+
 
 def load_study(
         study_name,  # type: str
@@ -771,6 +836,7 @@ def load_study(
     """
 
     return Study(study_name=study_name, storage=storage)
+
 
 def get_all_study_summaries(storage):
     # type: (Union[str, storages.BaseStorage]) -> List[basic.StudySummary]

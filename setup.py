@@ -42,6 +42,16 @@ REQUIRED = [
 EXTRAS = {
     # 'fancy feature': ['django'],
 }
+here = os.path.abspath(os.path.dirname(__file__))
+
+def parse_requirements(REQUIRED, here):
+    with open(os.path.join(here, 'requirements.txt')) as fp:
+        install_reqs = [r.rstrip() for r in fp.readlines()
+                        if not r.startswith('#') and not r.startswith('git+')]
+    new_reqs = [r for r in install_reqs if r not in REQUIRED]
+    REQUIRED += new_reqs
+    return REQUIRED
+REQUIRED = parse_requirements(REQUIRED, here)
 
 # The rest you shouldn't have to touch too much :)
 # ------------------------------------------------

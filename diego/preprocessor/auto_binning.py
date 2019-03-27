@@ -66,7 +66,7 @@ def normalize_feature_by_col(feature_col_origin, auto_binning, feature_num, binn
         elif binning_value_type in ["bins_NO"]:
             feature_col[f_idx] = cell[binning_value_type]
         else:
-            print("[warning]:", feature_num, binning_value_type, "not found, using woe")
+            # print("[warning]:", feature_num, binning_value_type, "not found, using woe")
             feature_col[f_idx] = np.float64(cell["woe"])
     return feature_col
 
@@ -164,7 +164,6 @@ class AutobinningTransform(BaseEstimator, TransformerMixin):
         if not featurename:
             featurename = [i for i in range(feature_cols+1)]
         self.feature_name = featurename
-        print(feature_cols, len(featurename))
         delete_list = []
         bins_model_save = {}
         bins_model_dict = dict()
