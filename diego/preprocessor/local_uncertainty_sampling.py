@@ -75,7 +75,7 @@ class LocalUncertaintySampling(BaseEstimator, TransformerMixin):
     def __init__(self, method='lus', model='lr', gamma=1.1):
         self.method = method
         if model == 'lr':
-            self.model = LogisticRegression(solver='sag', verbose=1, n_jobs=8)
+            self.model = LogisticRegression(solver='sag',max_iter=400, verbose=0, class_weight='balanced', n_jobs=-1)
         
         self.gamma = gamma
         if self.method not in ['lus', 'sm', 'entropy']:

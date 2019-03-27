@@ -163,3 +163,18 @@ class StudySummary(
         datetime_start:
             Datetime where the :class:`~diego.study.Study` started.
     """
+
+def get_approp_n_jobs(n_jobs=-1):
+    """
+    if core > 2, return core/2+2；
+    if core
+    """
+
+    import multiprocessing
+    max_jobs = multiprocessing.cpu_count()
+    if n_jobs == -1:
+        n_jobs = max_jobs
+    if max_jobs >= 4:
+        max_jobs = int(max_jobs/2) + 2
+    n_jobs = min(n_jobs, max_jobs)
+    return n_jobs

@@ -252,7 +252,7 @@ class Study(object):
             self.storage.set_train_storage(X_train, self.storage.y_train)
             self.storage.set_test_storage(X_test, y_test)
             self._pipe_add(self.binner)
-
+        n_jobs = basic.get_approp_n_jobs(n_jobs)
         if self.trial_list is None or self.trial_list == []:
             self.logger.warning('no trials, init by default params.')
             self.trial_list = self._init_trials(n_jobs)
@@ -261,9 +261,20 @@ class Study(object):
         #     self._optimize_sequential(self.trial_list, timeout, catch)
         # else:
         #     self._optimize_parallel(self.trial_list, timeout, n_jobs, catch)
-        self._optimize_sequential(self.trial_list, timeout, catch)
-        self._pipe_add(self.best_trial.clf)
-        self._export_model(self.export_model_path)
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            self._optimize_sequential(self.trial_list, timeout, catch)
+            self._pipe_add(self.best_trial.clf)
+            self._export_model(self.export_model_path)
+
+    def show_models(self):
+        for step in self.pipeline.steps:
+            name, estm = step
+            if isinstance(estm, AutoSklearnClassifier):
+                print(name, estm.show_models())
+            else:
+                print(name, estm)
 
     def set_user_attr(self, key, value):
         # type: (str, Any) -> None
@@ -632,10 +643,10 @@ class Study(object):
         import random
         if not ttype:
             ttype = random.choice(['autosk', 'tpot'])
-        if ttype == 'autosk':
-            new_trial = self.generate_autosk_trial(mode)
-        elif ttype == 'tpot':
-            new_trial = self.generate_tpot_trial(mode)
+        # if ttype == 'autosk':
+        new_trial = self.generate_autosk_trial(mode)
+        # elif ttype == 'tpot':
+            # new_trial = self.generate_tpot_trial(mode)
         # self.trial_list.append(new_trial)
         return new_trial
 
@@ -662,8 +673,7 @@ class Study(object):
                               disable_evaluator_output=False,
                               get_smac_object_callback=None,
                               smac_scenario_args=None,
-                              logging_config=None,
-                              metadata_directory=None,):
+                              logging_config=None,):
         """[summary]
 
         Keyword Arguments:
@@ -673,11 +683,13 @@ class Study(object):
         Returns:
             [type] -- [description]
         """
-
+        n_jobs = basic.get_approp_n_jobs(n_jobs)
         auto_sklearn_trial = create_trial(self)
         if mode == 'fast':
             time_left_for_this_task=120
             per_run_time_limit=30
+            ensemble_size = 10
+            ensemble_nbest = 3
         elif mode == 'big':
             ensemble_size=50
             ensemble_nbest=30
@@ -709,8 +721,7 @@ class Study(object):
                                                disable_evaluator_output=disable_evaluator_output,
                                                get_smac_object_callback=get_smac_object_callback,
                                                smac_scenario_args=smac_scenario_args,
-                                               logging_config=logging_config,
-                                               metadata_directory=metadata_directory)
+                                               logging_config=logging_config,)
         auto_sklearn_trial.clf = autosk_clf
         self.trial_list.append(auto_sklearn_trial)
         return auto_sklearn_trial
@@ -778,6 +789,8 @@ def create_study(X, y,
         study_name:
             Study's name. If this argument is set to None, a unique name is generated
             automatically.
+        is_auto_bin: do autobinning
+        bin_params: binning method
     Returns:
         A :class:`~diego.study.Study` object.
 
@@ -803,6 +816,8 @@ def create_study(X, y,
         study_name=study_name,
         storage=storage,
         sample_method=sample_method,
+        is_autobin=is_autobin,
+        bin_params=bin_params,
         export_model_path=export_model_path)
 
     if direction == 'minimize':
