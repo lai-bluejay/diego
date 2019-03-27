@@ -24,5 +24,5 @@ if __name__ == "__main__":
 
     s = create_study(X_train, y_train)
     s.generate_autosk_trial(mode='fast', n_jobs=-1)
-    s.optimize(X_test, y_test)
+    s.optimize(X_test, y_test, metrics='acc')
     s.show_models()

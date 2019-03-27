@@ -28,6 +28,8 @@ from diego.trials import Trial
 from diego import trials as trial_module
 from diego import basic
 from diego.core import Storage
+from diego import metrics as diego_metrics
+
 
 import collections
 import datetime
@@ -210,7 +212,8 @@ class Study(object):
             timeout=None,  # type: Optional[float]
             n_jobs=1,  # type: int
             # type: Union[Tuple[()], Tuple[Type[Exception]]]
-            catch=(Exception, )
+            catch=(Exception, ),
+            metrics:str ='logloss'
     ):
         # type: (...) -> None
         """Optimize an objective function.
@@ -264,7 +267,7 @@ class Study(object):
         import warnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            self._optimize_sequential(self.trial_list, timeout, catch)
+            self._optimize_sequential(self.trial_list, timeout, catch, metrics=metrics)
             self._pipe_add(self.best_trial.clf)
             self._export_model(self.export_model_path)
 
@@ -375,7 +378,8 @@ class Study(object):
             self,
             trials,  # type: Optional[int]
             timeout,  # type: Optional[float]
-            catch  # type: Union[Tuple[()], Tuple[Type[Exception]]]
+            catch ,
+            metrics:str='logloss',
     ):
         # type: (...) -> None
         time_start = datetime.datetime.now()
@@ -386,7 +390,7 @@ class Study(object):
                 if elapsed_seconds >= timeout:
                     break
 
-            self._run_trial(trial, catch)
+            self._run_trial(trial, catch, metrics=metrics)
 
     # TODO multi clf
     def _optimize_parallel(
@@ -453,12 +457,30 @@ class Study(object):
         que.close()
         que.join_thread()
 
-    def _run_trial(self, trial, catch):
+    @staticmethod
+    def _get_metric(metrics):
+        if metrics == 'auc' or metrics == 'roc_auc':
+            return diego_metrics.roc_auc
+        elif metrics == 'logloss':
+            return diego_metrics.log_loss
+        elif metrics == 'acc' or metrics == 'accuracy':
+            return diego_metrics.accuracy
+        elif metrics == 'balanced_acc' or metrics == 'balanced_accuracy':
+            return diego_metrics.balanced_accuracy
+        elif metrics == 'f1' or metrics == 'f1_score':
+            return diego_metrics.f1
+        elif metrics == 'mae':
+            return diego_metrics.mean_absolute_error
+        elif metrics == 'pac':
+            return diego_metrics.pac_score
+    
+    def _run_trial(self, trial, catch, metrics='auc'):
         # type: (ObjectiveFuncType, Union[Tuple[()], Tuple[Type[Exception]]]) -> trial_module.Trial
         trial_number = trial.number
-
+        metrics_func = self._get_metric(metrics)
+        print(type(metrics_func))
         try:
-            trial.clf.fit(self.storage.X_train, self.storage.y_train)
+            trial.clf.fit(self.storage.X_train, self.storage.y_train, metric=metrics_func)
             result = trial.clf.score(self.storage.X_test, self.storage.y_test)
         # except basic.TrialPruned as e:
             # message = 'Setting status of trial#{} as {}. {}'.format(trial_number,
