@@ -686,7 +686,7 @@ class Study(object):
                               include_preprocessors=None,
                               exclude_preprocessors=None,
                               resampling_strategy='cv',
-                              resampling_strategy_arguments={'folds':5}},
+                              resampling_strategy_arguments={'folds':5},
                               tmp_folder=None,
                               output_folder=None,
                               delete_tmp_folder_after_terminate=True,
