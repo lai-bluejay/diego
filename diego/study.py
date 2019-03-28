@@ -478,9 +478,13 @@ class Study(object):
         # type: (ObjectiveFuncType, Union[Tuple[()], Tuple[Type[Exception]]]) -> trial_module.Trial
         trial_number = trial.number
         metrics_func = self._get_metric(metrics)
-        print(type(metrics_func))
         try:
             trial.clf.fit(self.storage.X_train, self.storage.y_train, metric=metrics_func)
+            if trial.clf._resampling_strategy not in ['holdout', 'holdout-iterative-fit']:
+                self.logger.warning('Predict is currently not implemented for resampling strategy, refit it.')
+                self.logger.warning('we call refit() which trains all models in the final ensemble on the whole dataset.')
+                trial.clf.refit(self.storage.X_train, self.storage.y_train)
+            self.logger.info('Trial#{0} info :{}'.format(trial_num, trial.clf.sprint_statistics()))
             result = trial.clf.score(self.storage.X_test, self.storage.y_test)
         # except basic.TrialPruned as e:
             # message = 'Setting status of trial#{} as {}. {}'.format(trial_number,
