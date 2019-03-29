@@ -110,7 +110,8 @@ class Study(object):
                 self.bin_params = bin_params
             else:
                 self.bin_params = dict()
-            self.binner = AutobinningTransform()
+                self.bin_params['binning_method'] = 'xgb'
+            self.binner = AutobinningTransform(**self.bin_params)
         self.study_id = self.storage.get_study_id_from_name(study_name)
         self.logger = logging.get_logger(__name__)
         self.trial_list = []
@@ -245,15 +246,19 @@ class Study(object):
         self.storage.set_test_storage(X_test, y_test)
         # TODO Preprocess Trial
         if self.sample_method == 'lus':
+            self.logger.info('Sampling training dataset with lus. Origin data shape is {0}'.format(str(self.storage.X_train.shape)))
             X_train, y_train = self.storage.X_train, self.storage.y_train
             X_train, y_train = self.sampler.fit_transform(X_train, y_train)
+            self.logger.info('Sampling is done. Sampled data shape is {0}'.format(str(X_train.shape)))
             self.storage.set_train_storage(X_train, y_train)
         if self.is_autobin:
+            self.logger.info("begin to autobinning data by {}  with method".format(type(self.binner), self.binner.binning_method))
             self.binner.fit(self.storage.X_train, self.storage.y_train)
             X_train = self.binner.transform(self.storage.X_train)
             X_test = self.binner.transform(X_test)
             self.storage.set_train_storage(X_train, self.storage.y_train)
             self.storage.set_test_storage(X_test, y_test)
+            self.logger.warning('Binning is done. Binning would transform test_data to new bin.')
             self._pipe_add(self.binner)
         n_jobs = basic.get_approp_n_jobs(n_jobs)
         if self.trial_list is None or self.trial_list == []:
@@ -480,7 +485,7 @@ class Study(object):
         metrics_func = self._get_metric(metrics)
         try:
             trial.clf.fit(self.storage.X_train, self.storage.y_train, metric=metrics_func)
-            if trial.clf._resampling_strategy not in ['holdout', 'holdout-iterative-fit']:
+            if trial.clf.resampling_strategy not in ['holdout', 'holdout-iterative-fit']:
                 self.logger.warning('Predict is currently not implemented for resampling strategy, refit it.')
                 self.logger.warning('we call refit() which trains all models in the final ensemble on the whole dataset.')
                 trial.clf.refit(self.storage.X_train, self.storage.y_train)
