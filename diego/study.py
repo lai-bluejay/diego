@@ -473,18 +473,18 @@ class Study(object):
             return diego_metrics.mean_absolute_error
         elif metrics == 'pac':
             return diego_metrics.pac_score
-    
+
     def _run_trial(self, trial, catch, metrics='auc'):
         # type: (ObjectiveFuncType, Union[Tuple[()], Tuple[Type[Exception]]]) -> trial_module.Trial
         trial_number = trial.number
         metrics_func = self._get_metric(metrics)
         try:
             trial.clf.fit(self.storage.X_train, self.storage.y_train, metric=metrics_func)
-            if trial.clf._resampling_strategy not in ['holdout', 'holdout-iterative-fit']:
+            if trial.clf.resampling_strategy not in ['holdout', 'holdout-iterative-fit']:
                 self.logger.warning('Predict is currently not implemented for resampling strategy, refit it.')
                 self.logger.warning('we call refit() which trains all models in the final ensemble on the whole dataset.')
                 trial.clf.refit(self.storage.X_train, self.storage.y_train)
-            self.logger.info('Trial#{0} info :{}'.format(trial_num, trial.clf.sprint_statistics()))
+            self.logger.info('Trial#{0} info :{1}'.format(trial_number, trial.clf.sprint_statistics()))
             result = trial.clf.score(self.storage.X_test, self.storage.y_test)
         # except basic.TrialPruned as e:
             # message = 'Setting status of trial#{} as {}. {}'.format(trial_number,

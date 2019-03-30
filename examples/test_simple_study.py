@@ -22,7 +22,7 @@ if __name__ == "__main__":
     X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(digits.data, digits.target,
                                                                                 train_size=0.75, test_size=0.25)
 
-    s = create_study(X_train, y_train)
+    s = create_study(X_train, y_train, is_autobin=True, sample_method=None)
     s.generate_autosk_trial(mode='fast', n_jobs=-1)
     s.optimize(X_test, y_test, metrics='acc')
     s.show_models()
