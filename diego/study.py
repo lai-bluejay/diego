@@ -480,6 +480,7 @@ class Study(object):
         metrics_func = self._get_metric(metrics)
         try:
             trial = self.fit_autosk_trial(trial, metric=metrics_func)
+
             result = trial.clf.score(self.storage.X_test, self.storage.y_test)
         # except basic.TrialPruned as e:
             # message = 'Setting status of trial#{} as {}. {}'.format(trial_number,
