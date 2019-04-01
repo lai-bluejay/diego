@@ -35,7 +35,7 @@ REQUIRED = [
     'pyrfr==0.7.4',
     'smac==0.8',
     'ConfigSpace==0.4.9',
-    'auto-sklearn==0.5.0'
+    'auto-sklearn==0.5.1'
 ]
 
 # What packages are optional?
