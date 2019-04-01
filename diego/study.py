@@ -690,7 +690,6 @@ def create_trial(study: Study):
     trial = Trial(study, trial_id)
     return trial
 
-
 def get_storage(storage):
     # type: (Union[None, str, BaseStorage]) -> BaseStorage
 
