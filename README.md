@@ -26,7 +26,7 @@ Inspired by [Fast.ai](https://github.com/fastai/fastai) and [MicroSoft nni](http
 You need to install swig first, and some rely on C/C++ interface compilation. Recommended to use conda installation
 
 ```shell
-conda install swig
+conda install gcc swig
 pip install diego
 ```
 

@@ -23,7 +23,7 @@ Diego: Data in, IntElliGence Out.
 需要先安装swig，部分依赖C/C++的接口编译。推荐使用 conda 安装
 
 ```shell
-conda install swig
+conda install gcc swig
 pip install diego
 ```
 
