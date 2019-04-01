@@ -95,6 +95,14 @@ class BaseTrial(object):
     @clf.setter
     def clf(self, clf):
         self._clf = clf
+    
+    @property
+    def clf_params(self):
+        return self._clf_params
+    
+    @clf_params.setter
+    def clf_params(self, params):
+        self._clf_params = params
 
 class Trial(BaseTrial):
     """A trial is a process of evaluating an objective function.
@@ -122,6 +130,8 @@ class Trial(BaseTrial):
 
         self.study_id = self.study.study_id
         self.storage = self.study.storage
+        self._clf = None
+        self._clf_params = {}
         self.logger = logging.get_logger(__name__)
 
     def report(self, value, step=None):
