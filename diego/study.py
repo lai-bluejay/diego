@@ -210,10 +210,10 @@ class Study(object):
     def optimize(
             self, X_test, y_test,
             timeout=None,  # type: Optional[float]
-            n_jobs=1,  # type: int
+            n_jobs=-1,  # type: int
             # type: Union[Tuple[()], Tuple[Type[Exception]]]
             catch=(Exception, ),
-            metrics:str ='logloss'
+            metrics: str ='logloss'
     ):
         # type: (...) -> None
         """Optimize an objective function.
@@ -221,19 +221,15 @@ class Study(object):
         Args:
             func:
                 A callable that implements objective function.
-            n_trials:
-                The number of trials. If this argument is set to :obj:`None`, there is no
-                limitation on the number of trials. If :obj:`timeout` is also set to :obj:`None`,
-                the study continues to create trials until it receives a termination signal such
-                as Ctrl+C or SIGTERM.
+            n_jobs:
+                default = 1; jobs to run trials.
             timeout:
                 Stop study after the given number of second(s). If this argument is set to
                 :obj:`None`, the study is executed without time limitation. If :obj:`n_trials` is
                 also set to :obj:`None`, the study continues to create trials until it receives a
                 termination signal such as Ctrl+C or SIGTERM.
-            n_jobs:
-                The number of parallel jobs. If this argument is set to :obj:`-1`, the number is
-                set to CPU counts.
+            metrics:
+                metrics to optimize study.
             catch:
                 A study continues to run even when a trial raises one of exceptions specified in
                 this argument. Default is (`Exception <https://docs.python.org/3/library/
@@ -259,6 +255,9 @@ class Study(object):
         if self.trial_list is None or self.trial_list == []:
             self.logger.warning('no trials, init by default params.')
             self.trial_list = self._init_trials(n_jobs)
+        self.metrics = metrics
+        if metrics is in ['logloss']:
+            self.storage.direction = basic.StudyDirection.MINIMIZE
         # 当前保证在Trial内进行多进程
         # if n_jobs == 1:
         #     self._optimize_sequential(self.trial_list, timeout, catch)
@@ -267,6 +266,7 @@ class Study(object):
         import warnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
+            # do not generate clf in advanced.
             self._optimize_sequential(self.trial_list, timeout, catch, metrics=metrics)
             self._pipe_add(self.best_trial.clf)
             self._export_model(self.export_model_path)
@@ -368,9 +368,9 @@ class Study(object):
 
         return pd.DataFrame(records, columns=pd.MultiIndex.from_tuples(columns))
 
-    def _init_trials(self, metrics='roc_auc', n_jobs=1):
+    def _init_trials(self, n_jobs=1):
         # tpot耗时较久，舍弃。相同时间内不如auto-sklearn
-        auto_sklearn_trial = self.generate_autosk_trial()
+        auto_sklearn_trial = self.generate_trial(mode='fast', n_jobs=n_jobs, include_estimators=["extra_trees", "random_forest", "gaussian_nb", "xgradient_boosting"])
         # tpot_trial = self.generate_tpot_trial()
         return [auto_sklearn_trial]
 
@@ -378,8 +378,8 @@ class Study(object):
             self,
             trials,  # type: Optional[int]
             timeout,  # type: Optional[float]
-            catch ,
-            metrics:str='logloss',
+            catch,
+            metrics: str='logloss',
     ):
         # type: (...) -> None
         time_start = datetime.datetime.now()
@@ -473,86 +473,13 @@ class Study(object):
             return diego_metrics.mean_absolute_error
         elif metrics == 'pac':
             return diego_metrics.pac_score
-    
+
     def _run_trial(self, trial, catch, metrics='auc'):
         # type: (ObjectiveFuncType, Union[Tuple[()], Tuple[Type[Exception]]]) -> trial_module.Trial
         trial_number = trial.number
         metrics_func = self._get_metric(metrics)
-        print(type(metrics_func))
         try:
-            trial.clf.fit(self.storage.X_train, self.storage.y_train, metric=metrics_func)
-            result = trial.clf.score(self.storage.X_test, self.storage.y_test)
-        # except basic.TrialPruned as e:
-            # message = 'Setting status of trial#{} as {}. {}'.format(trial_number,
-            #                                                         basic.TrialState.PRUNED,
-            #                                                         str(e))
-            # self.logger.info(message)
-            # self.storage.set_trial_state(trial_id, basic.TrialState.PRUNED)
-            # return trial
-        except catch as e:
-            message = 'Setting status of trial#{} as {} because of the following error: {}'\
-                .format(trial_number, basic.TrialState.FAIL, repr(e))
-            self.logger.warning(message, exc_info=True)
-            self.storage.set_trial_state(trial_number, basic.TrialState.FAIL)
-            self.storage.set_trial_system_attr(
-                trial_number, 'fail_reason', message)
-            return trial
-
-        try:
-            # result = float(result)
-            self.logger.info('Trial{} was done'.format(trial.number))
-        except (
-                ValueError,
-                TypeError,
-        ):
-            message = 'Setting status of trial#{} as {} because the returned value from the ' \
-                      'objective function cannot be casted to float. Returned value is: ' \
-                      '{}'.format(
-                          trial_number, basic.TrialState.FAIL, repr(result))
-            self.logger.warning(message)
-            self.storage.set_trial_state(trial_number, basic.TrialState.FAIL)
-            self.storage.set_trial_system_attr(
-                trial_number, 'fail_reason', message)
-            return trial
-
-        if math.isnan(result):
-            message = 'Setting status of trial#{} as {} because the objective function ' \
-                      'returned {}.'.format(
-                          trial_number, basic.TrialState.FAIL, result)
-            self.logger.warning(message)
-            self.storage.set_trial_state(trial_number, basic.TrialState.FAIL)
-            self.storage.set_trial_system_attr(
-                trial_number, 'fail_reason', message)
-            return trial
-
-        trial.report(result)
-        self.storage.set_trial_state(trial_number, basic.TrialState.COMPLETE)
-        self._log_completed_trial(trial_number, result)
-
-        return trial
-
-    def _run_proprecess_trial(self, trial, catch):
-        # TODO Preprocess Trial
-        X_train, y_train = self.storage.X_train, self.storage.y_train
-        X_train, y_train = trial.clf.fit_transform(X_train, y_train)
-        self.storage.set_train_storage(X_train, y_train)
-        # whether to do in Test set  and add to Study.pipeline
-        if self.sample_method == 'lus':
-            X_train, y_train = self.storage.X_train, self.storage.y_train
-            X_train, y_train = self.sampler.fit_transform(X_train, y_train)
-            self.storage.set_train_storage(X_train, y_train)
-        if self.is_autobin:
-            self.binner.fit(self.storage.X_train, self.storage.y_train)
-            X_train = self.binner.transform(self.storage.X_train)
-            X_test = self.binner.transform(X_test)
-            self.storage.set_train_storage(X_train, self.storage.y_train)
-            self.storage.set_test_storage(X_test, y_test)
-            self._pipe_add(self.binner)
-
-        trial_number = trial.number
-
-        try:
-            trial.clf.fit(self.storage.X_train, self.storage.y_train)
+            trial = self.fit_autosk_trial(trial, metric=metrics_func)
             result = trial.clf.score(self.storage.X_test, self.storage.y_test)
         # except basic.TrialPruned as e:
             # message = 'Setting status of trial#{} as {}. {}'.format(trial_number,
@@ -610,6 +537,122 @@ class Study(object):
                          'Current best value is {}.'.format(
                              trial_number, value, self.best_value))
 
+    # TODO decorator, add trials to pipeline.
+    def fit_autosk_trial(self, trial, metric,  **kwargs):
+        # n_jobs = basic.get_approp_n_jobs(n_jobs)
+        trial_number = trial.number
+        params = trial.clf_params
+        autosk_clf = AutoSklearnClassifier(**params)
+        X_train = self.storage.X_train
+        y_train = self.storage.y_train
+        # TODO metrics to trial
+        autosk_clf.fit(X_train, y_train, metric=metric)
+        if autosk_clf.resampling_strategy not in ['holdout', 'holdout-iterative-fit']:
+            self.logger.warning('Predict is currently not implemented for resampling strategy, refit it.')
+            self.logger.warning('we call refit() which trains all models in the final ensemble on the whole dataset.')
+            autosk_clf.refit(self.storage.X_train, self.storage.y_train)
+            self.logger.info('Trial#{0} info :{1}'.format(trial_number, autosk_clf.sprint_statistics()))
+        trial.clf = autosk_clf
+        return trial
+
+    def generate_trial(self, mode='fast', n_jobs=-1, time_left_for_this_task=3600,
+                              per_run_time_limit=360,
+                              initial_configurations_via_metalearning=25,
+                              ensemble_size = 50,
+                              ensemble_nbest=50,
+                              ensemble_memory_limit=4096,
+                              seed=1,
+                              ml_memory_limit=10240,
+                              include_estimators=None,
+                              exclude_estimators=None,
+                              include_preprocessors=None,
+                              exclude_preprocessors=None,
+                              resampling_strategy='cv',
+                              resampling_strategy_arguments={'folds':5}):
+        """ generate trial's base params
+        estimators list:
+        # Combinations of non-linear models with feature learning:
+        classifiers_ = ["adaboost", "decision_tree", "extra_trees",
+                        "gradient_boosting", "k_nearest_neighbors",
+                        "libsvm_svc", "random_forest", "gaussian_nb",
+                        "decision_tree", "xgradient_boosting"]
+
+        # Combinations of tree-based models with feature learning:
+        regressors_ = ["adaboost", "decision_tree", "extra_trees",
+                       "gaussian_process", "gradient_boosting",
+                       "k_nearest_neighbors", "random_forest", "xgradient_boosting"]
+
+
+        Keyword Arguments:
+            mode {str} -- [description] (default: {'fast'})
+            n_jobs {int} -- [description] (default: {-1})
+            mode {str} -- 
+            estimators list
+
+        Returns:
+            [type] -- [description]
+        """
+        n_jobs = basic.get_approp_n_jobs(n_jobs)
+        print(n_jobs)
+        if mode == 'fast':
+            time_left_for_this_task = 120
+            per_run_time_limit = 30
+            ensemble_size = 5
+            ensemble_nbest = 2
+        elif mode == 'big':
+            ensemble_size = 50
+            ensemble_nbest = 20
+            ml_memory_limit = 10240
+            ensemble_memory_limit = 4096
+            time_left_for_this_task = 14400
+            per_run_time_limit = 1440
+        else:
+            pass
+        base_params = {'n_jobs': n_jobs,
+                       "time_left_for_this_task": time_left_for_this_task,
+                       "per_run_time_limit": per_run_time_limit,
+                       "initial_configurations_via_metalearning": initial_configurations_via_metalearning,
+                       "ensemble_size": ensemble_size,
+                       "ensemble_nbest": ensemble_nbest,
+                       "ensemble_memory_limit": ensemble_memory_limit,
+                       "seed": seed,
+                       "ml_memory_limit": ml_memory_limit,
+                       "include_estimators": include_estimators,
+                       "exclude_estimators": exclude_estimators,
+                       "include_preprocessors": include_preprocessors,
+                       "exclude_preprocessors": exclude_preprocessors,
+                       "resampling_strategy": resampling_strategy,
+                       "resampling_strategy_arguments": resampling_strategy_arguments}
+        print(base_params)
+        # n_jobs = basic.get_approp_n_jobs(n_jobs)
+        auto_sklearn_trial = create_trial(self)
+        auto_sklearn_trial.clf_params = base_params
+        self.trial_list.append(auto_sklearn_trial)
+        return auto_sklearn_trial
+
+    # def generate_tpot_trial(self, mode='fast', **kwargs):
+    #     tpot_trial = create_trial(self)
+    #     # ref: http://epistasislab.github.io/tpot/api/
+    #     # TPOT will evaluate population_size + generations × offspring_size pipelines in total.
+    #     if mode == 'fast':
+    #         tpot_clf = TPOTClassifier(generations=5, population_size=10,
+    #                                   verbosity=2, n_jobs=-1, max_eval_time_mins=10, early_stop=5)
+    #     elif mode == 'test':
+    #         tpot_clf = TPOTClassifier(
+    #             generations=2, population_size=10, n_jobs=-1, verbosity=1)
+    #     elif mode == 'self-define':
+    #         tpot_clf = TPOTClassifier(**kwargs)
+    #     else:
+    #         tpot_clf = TPOTClassifier(generations=50, population_size=100,
+    #                                   verbosity=2, scoring='accuracy', n_jobs=-1, max_eval_time_mins=60, early_stop=30)
+    #     tpot_trial.clf = tpot_clf
+    #     self.trial_list.append(tpot_trial)
+    #     return tpot_trial
+
+    def add_preprocessor_trial(self, trial):
+        pass
+
+
     def _pipe_add(self, step):
         """add steps to Study.pipeline
 
@@ -641,136 +684,6 @@ class Study(object):
         export_model_path = export_model_path + model_name
         joblib.dump(self.pipeline, export_model_path)
 
-    def generate_preprocessor_trials(self, mode='fast', ttype=None):
-        """generate simple trials
-
-        Keyword Arguments:
-            mode {str} -- [description] (default: {'fast'})
-            ttype {[type]} -- [description] (default: {None})
-        """
-
-        import random
-        preprocessor_trial = create_trial(self)
-        # self.trial_list.append(new_trial)
-        return preprocessor_trial
-
-    def generate_trials(self, mode='fast', ttype=None):
-        """generate simple trials
-
-        Keyword Arguments:
-            mode {str} -- [description] (default: {'fast'})
-            ttype {[type]} -- [description] (default: {None})
-        """
-
-        import random
-        if not ttype:
-            ttype = random.choice(['autosk', 'tpot'])
-        # if ttype == 'autosk':
-        new_trial = self.generate_autosk_trial(mode)
-        # elif ttype == 'tpot':
-            # new_trial = self.generate_tpot_trial(mode)
-        # self.trial_list.append(new_trial)
-        return new_trial
-
-    # TODO decorator, add trials to pipeline.
-    def generate_autosk_trial(self, mode='fast', n_jobs=-1, time_left_for_this_task=3600,
-                              per_run_time_limit=360,
-                              initial_configurations_via_metalearning=25,
-                              ensemble_size: int = 50,
-                              ensemble_nbest=50,
-                              ensemble_memory_limit=4096,
-                              seed=1,
-                              ml_memory_limit=10240,
-                              include_estimators=None,
-                              exclude_estimators=None,
-                              include_preprocessors=None,
-                              exclude_preprocessors=None,
-                              resampling_strategy='holdout',
-                              resampling_strategy_arguments=None,
-                              tmp_folder=None,
-                              output_folder=None,
-                              delete_tmp_folder_after_terminate=True,
-                              delete_output_folder_after_terminate=True,
-                              shared_mode=False,
-                              disable_evaluator_output=False,
-                              get_smac_object_callback=None,
-                              smac_scenario_args=None,
-                              logging_config=None,):
-        """[summary]
-
-        Keyword Arguments:
-            mode {str} -- [description] (default: {'fast'})
-            n_jobs {int} -- [description] (default: {-1})
-
-        Returns:
-            [type] -- [description]
-        """
-        n_jobs = basic.get_approp_n_jobs(n_jobs)
-        auto_sklearn_trial = create_trial(self)
-        if mode == 'fast':
-            time_left_for_this_task=120
-            per_run_time_limit=30
-            ensemble_size = 10
-            ensemble_nbest = 3
-        elif mode == 'big':
-            ensemble_size=50
-            ensemble_nbest=30
-            ml_memory_limit=10240
-            ensemble_memory_limit=4096
-            time_left_for_this_task=14400
-            per_run_time_limit=1440
-        else:
-            pass
-        autosk_clf = AutoSklearnClassifier(n_jobs=n_jobs, time_left_for_this_task=time_left_for_this_task,
-                                               per_run_time_limit=per_run_time_limit,
-                                               initial_configurations_via_metalearning=initial_configurations_via_metalearning,
-                                               ensemble_size=ensemble_size,
-                                               ensemble_nbest=ensemble_nbest,
-                                               ensemble_memory_limit=ensemble_memory_limit,
-                                               seed=seed,
-                                               ml_memory_limit=ml_memory_limit,
-                                               include_estimators=include_estimators,
-                                               exclude_estimators=exclude_estimators,
-                                               include_preprocessors=include_preprocessors,
-                                               exclude_preprocessors=exclude_preprocessors,
-                                               resampling_strategy=resampling_strategy,
-                                               resampling_strategy_arguments=resampling_strategy_arguments,
-                                               tmp_folder=tmp_folder,
-                                               output_folder=output_folder,
-                                               delete_tmp_folder_after_terminate=delete_tmp_folder_after_terminate,
-                                               delete_output_folder_after_terminate=delete_output_folder_after_terminate,
-                                               shared_mode=shared_mode,
-                                               disable_evaluator_output=disable_evaluator_output,
-                                               get_smac_object_callback=get_smac_object_callback,
-                                               smac_scenario_args=smac_scenario_args,
-                                               logging_config=logging_config,)
-        auto_sklearn_trial.clf = autosk_clf
-        self.trial_list.append(auto_sklearn_trial)
-        return auto_sklearn_trial
-
-    def generate_tpot_trial(self, mode='fast', **kwargs):
-        tpot_trial = create_trial(self)
-        # ref: http://epistasislab.github.io/tpot/api/
-        # TPOT will evaluate population_size + generations × offspring_size pipelines in total.
-        if mode == 'fast':
-            tpot_clf = TPOTClassifier(generations=5, population_size=10,
-                                      verbosity=2, n_jobs=-1, max_eval_time_mins=10, early_stop=5)
-        elif mode == 'test':
-            tpot_clf = TPOTClassifier(
-                generations=2, population_size=10, n_jobs=-1, verbosity=1)
-        elif mode == 'self-define':
-            tpot_clf = TPOTClassifier(**kwargs)
-        else:
-            tpot_clf = TPOTClassifier(generations=50, population_size=100,
-                                      verbosity=2, scoring='accuracy', n_jobs=-1, max_eval_time_mins=60, early_stop=30)
-        tpot_trial.clf = tpot_clf
-        self.trial_list.append(tpot_trial)
-        return tpot_trial
-
-    def add_preprocessor_trial(self, trial):
-        pass
-
-
 def create_trial(study: Study):
     trial_id = study.storage.create_new_trial_id(study.study_id)
     trial = Trial(study, trial_id)
@@ -788,7 +701,7 @@ def get_storage(storage):
 
 def create_study(X, y,
                  storage=None,  # type: Union[None, str, storages.BaseStorage]
-                 sample_method='lus',
+                 sample_method=None,
                  study_name=None,  # type: Optional[str]
                  direction='maximize',  # type: str
                  load_cache=False,  # type: bool

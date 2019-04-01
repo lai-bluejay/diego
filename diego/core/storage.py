@@ -181,7 +181,8 @@ class InMemoryStorage(object):
                     datetime_start=datetime.now(),
                     datetime_complete=None,
                     trial_id=trial_id,
-                    clf=None))
+                    clf=None,
+                    clf_params=None))
         return trial_id
 
     def set_trial_state(self, trial_id, state):

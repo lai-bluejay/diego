@@ -18,19 +18,19 @@ URL = 'https://github.com/lai-bluejay/diego'
 EMAIL = 'lai.bluejay@gmail.com'
 AUTHOR = 'Charles Lai'
 REQUIRES_PYTHON = '>=3.6.0'
-VERSION = '0.1.5.1'
+VERSION = '0.1.5.4'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
     # 'requests', 'maya', 'records',
-    'numpy>=1.12.1',
+    'numpy==1.14.5',
     'scipy>=0.19.0',
     'scikit-learn>=0.18.1',
     'deap>=1.0',
     'update_checker>=0.16',
-    'tqdm>=4.26.0',
+    'tqdm==4.26.0',
     'stopit>=1.1.1',
-    'pandas>=0.20.2',
+    'pandas==0.24.2',
     'xgboost==0.82',
     'pyrfr==0.7.4',
     'smac==0.8',

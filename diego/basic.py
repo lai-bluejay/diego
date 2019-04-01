@@ -127,6 +127,7 @@ class BaseFrozenTrial(NamedTuple):
     params_in_internal_repr: Dict[str, float]
     trial_id: int
     clf: Any
+    clf_params: Dict[str, Any]
 
 class FrozenTrial(BaseFrozenTrial):
     internal_fields = ['params_in_internal_repr', 'trial_id']
