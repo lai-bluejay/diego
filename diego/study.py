@@ -635,7 +635,8 @@ class Study(object):
             per_run_time_limit = 1440
         else:
             pass
-        home_dir = os.getenv("HOME")
+        from pathlib import Path
+        home_dir =str(Path.home())
         tmp_folder = home_dir + tmp_folder
         output_folder = home_dir + output_folder
         if not os.path.exists(home_dir + '/tmp'):
