@@ -15,6 +15,7 @@ import autosklearn.pipeline.components.feature_preprocessing
 from autosklearn.pipeline.components.base import AutoSklearnPreprocessingAlgorithm
 from autosklearn.pipeline.constants import DENSE, SIGNED_DATA, \
     UNSIGNED_DATA
+from diego.depens import logging
 
 class LocalUncertaintySampling(BaseEstimator, TransformerMixin):
 
@@ -74,9 +75,10 @@ class LocalUncertaintySampling(BaseEstimator, TransformerMixin):
 
     def __init__(self, method='lus', model='lr', gamma=1.1):
         self.method = method
+        self.logger = logging.get_logger(__name__)
         if model == 'lr':
             self.model = LogisticRegression(solver='sag',max_iter=400, verbose=0, class_weight='balanced', n_jobs=-1)
-        
+        self.logger.info('Local Uncertainty Sampling with {0} method, model is {1}'.format(method, self.model))
         self.gamma = gamma
         if self.method not in ['lus', 'sm', 'entropy']:
             raise TypeError(

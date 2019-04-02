@@ -15,8 +15,9 @@ from typing import List
 from typing import Dict
 from typing import Callable
 from typing import Any
-
+import os
 from collections import defaultdict
+import numpy as np
 
 from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.utils import validation
@@ -93,9 +94,23 @@ class Study(object):
             sample_params=dict(),
             is_autobin=False,
             bin_params=dict(),
-            export_model_path=None
+            export_model_path=None,
+            precision=np.float64
     ):
-        # type: (...) -> None
+        """[summary]
+        
+        Arguments:
+            study_name {[type]} -- [description]
+        
+        Keyword Arguments:
+            sample_params {[type]} -- [description] (default: {dict()})
+            is_autobin {bool} -- [description] (default: {False})
+            bin_params {[type]} -- [description] (default: {dict()})
+            export_model_path {[type]} -- [description] (default: {None})
+            precision {[np.dtype]} -- precision:
+                np.dtypes, float16, float32, float64 for data precision to reduce memory size. (default: {None})
+        """
+
 
         self.study_name = study_name
         self.storage = get_storage(storage)
@@ -118,6 +133,7 @@ class Study(object):
         # export model. should be joblib.Memory object
         self.pipeline = None
         self.export_model_path = export_model_path
+        self.precision = precision
 
     def __getstate__(self):
         # type: () -> Dict[Any, Any]
@@ -214,7 +230,8 @@ class Study(object):
             n_jobs=-1,  # type: int
             # type: Union[Tuple[()], Tuple[Type[Exception]]]
             catch=(Exception, ),
-            metrics: str ='logloss'
+            metrics: str ='logloss',
+            precision=None,
     ):
         # type: (...) -> None
         """Optimize an objective function.
@@ -239,22 +256,28 @@ class Study(object):
 
         """
         X_test, y_test = check_X_y(X_test, y_test)
+        if not precision:
+            X_test = X_test.astype(dtype=self.precision, copy=False)
         self.storage.set_test_storage(X_test, y_test)
         # TODO Preprocess Trial
         if self.sample_method == 'lus':
-            self.logger.info('Sampling training dataset with lus. Origin data shape is {0}'.format(str(self.storage.X_train.shape)))
+            self.logger.info('Sampling training dataset with lus. Origin data shape is {0}'.format(
+                str(self.storage.X_train.shape)))
             X_train, y_train = self.storage.X_train, self.storage.y_train
             X_train, y_train = self.sampler.fit_transform(X_train, y_train)
-            self.logger.info('Sampling is done. Sampled data shape is {0}'.format(str(X_train.shape)))
+            self.logger.info(
+                'Sampling is done. Sampled data shape is {0}'.format(str(X_train.shape)))
             self.storage.set_train_storage(X_train, y_train)
         if self.is_autobin:
-            self.logger.info("begin to autobinning data by {}  with method".format(type(self.binner), self.binner.binning_method))
+            self.logger.info("begin to autobinning data by {}  with method {}".format(
+                type(self.binner), self.binner.binning_method))
             self.binner.fit(self.storage.X_train, self.storage.y_train)
             X_train = self.binner.transform(self.storage.X_train)
             X_test = self.binner.transform(X_test)
             self.storage.set_train_storage(X_train, self.storage.y_train)
             self.storage.set_test_storage(X_test, y_test)
-            self.logger.warning('Binning is done. Binning would transform test_data to new bin.')
+            self.logger.warning(
+                'Binning is done. Binning would transform test_data to new bin.')
             self._pipe_add(self.binner)
         n_jobs = basic.get_approp_n_jobs(n_jobs)
         if self.trial_list is None or self.trial_list == []:
@@ -272,7 +295,8 @@ class Study(object):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             # do not generate clf in advanced.
-            self._optimize_sequential(self.trial_list, timeout, catch, metrics=metrics)
+            self._optimize_sequential(
+                self.trial_list, timeout, catch, metrics=metrics)
             self._pipe_add(self.best_trial.clf)
             self._export_model(self.export_model_path)
 
@@ -375,7 +399,8 @@ class Study(object):
 
     def _init_trials(self, n_jobs=1):
         # tpot耗时较久，舍弃。相同时间内不如auto-sklearn
-        auto_sklearn_trial = self.generate_trial(mode='fast', n_jobs=n_jobs, include_estimators=["extra_trees", "random_forest", "gaussian_nb", "xgradient_boosting"])
+        auto_sklearn_trial = self.generate_trial(mode='fast', n_jobs=n_jobs, include_estimators=[
+                                                 "extra_trees", "random_forest", "gaussian_nb", "xgradient_boosting"])
         # tpot_trial = self.generate_tpot_trial()
         return [auto_sklearn_trial]
 
@@ -554,27 +579,24 @@ class Study(object):
         # TODO metrics to trial
         autosk_clf.fit(X_train, y_train, metric=metric)
         if autosk_clf.resampling_strategy not in ['holdout', 'holdout-iterative-fit']:
-            self.logger.warning('Predict is currently not implemented for resampling strategy, refit it.')
-            self.logger.warning('we call refit() which trains all models in the final ensemble on the whole dataset.')
+            self.logger.warning(
+                'Predict is currently not implemented for resampling strategy, refit it.')
+            self.logger.warning(
+                'we call refit() which trains all models in the final ensemble on the whole dataset.')
             autosk_clf.refit(self.storage.X_train, self.storage.y_train)
-            self.logger.info('Trial#{0} info :{1}'.format(trial_number, autosk_clf.sprint_statistics()))
+            self.logger.info('Trial#{0} info :{1}'.format(
+                trial_number, autosk_clf.sprint_statistics()))
         trial.clf = autosk_clf
         return trial
 
-    def generate_trial(self, mode='fast', n_jobs=-1, time_left_for_this_task=3600,
-                              per_run_time_limit=360,
-                              initial_configurations_via_metalearning=25,
-                              ensemble_size = 50,
-                              ensemble_nbest=50,
-                              ensemble_memory_limit=4096,
-                              seed=1,
-                              ml_memory_limit=10240,
-                              include_estimators=None,
-                              exclude_estimators=None,
-                              include_preprocessors=None,
-                              exclude_preprocessors=None,
-                              resampling_strategy='cv',
-                              resampling_strategy_arguments={'folds':5}):
+    def generate_trial(self, mode='fast', n_jobs=-1, time_left_for_this_task=3600, per_run_time_limit=360,
+                       initial_configurations_via_metalearning=25, ensemble_size=50, ensemble_nbest=50,
+                       ensemble_memory_limit=4096, seed=1, ml_memory_limit=10240, include_estimators=None,
+                       exclude_estimators=None, include_preprocessors=None, exclude_preprocessors=None,
+                       resampling_strategy='cv', resampling_strategy_arguments={'folds': 5},
+                       tmp_folder="/tmp/autosklearn_tmp", output_folder="/tmp/autosklearn_output", delete_tmp_folder_after_terminate=True, delete_output_folder_after_terminate=True, 
+                       shared_mode=False, disable_evaluator_output=False, get_smac_object_callback=None, smac_scenario_args=None, 
+                       logging_config=None):
         """ generate trial's base params
         estimators list:
         # Combinations of non-linear models with feature learning:
@@ -599,7 +621,6 @@ class Study(object):
             [type] -- [description]
         """
         n_jobs = basic.get_approp_n_jobs(n_jobs)
-        print(n_jobs)
         if mode == 'fast':
             time_left_for_this_task = 120
             per_run_time_limit = 30
@@ -614,6 +635,16 @@ class Study(object):
             per_run_time_limit = 1440
         else:
             pass
+        home_dir = os.getenv("HOME")
+        tmp_folder = home_dir + tmp_folder
+        output_folder = home_dir + output_folder
+        
+        if not os.path.existing(tmp_folder):
+            os.mkdir(tmp_folder)
+        if not os.path.existing(output_folder):
+            os.mkdir(output_folder)
+
+        
         base_params = {'n_jobs': n_jobs,
                        "time_left_for_this_task": time_left_for_this_task,
                        "per_run_time_limit": per_run_time_limit,
@@ -628,9 +659,16 @@ class Study(object):
                        "include_preprocessors": include_preprocessors,
                        "exclude_preprocessors": exclude_preprocessors,
                        "resampling_strategy": resampling_strategy,
-                       "resampling_strategy_arguments": resampling_strategy_arguments}
+                       "resampling_strategy_arguments": resampling_strategy_arguments, 
+                       "tmp_folder":tmp_folder, "output_folder": output_folder, 
+                       "delete_tmp_folder_after_terminate": delete_tmp_folder_after_terminate, 
+                       "delete_output_folder_after_terminate": delete_output_folder_after_terminate, 
+                       "shared_mode": shared_mode, "disable_evaluator_output": disable_evaluator_output, 
+                       "get_smac_object_callback": get_smac_object_callback, 
+                       "smac_scenario_args": smac_scenario_args, 
+                       "logging_config": logging_config}
         print(base_params)
-        # n_jobs = basic.get_approp_n_jobs(n_jobs)
+        # n_jobs ":  basic.get_approp_n_jobs(n_jobs)
         auto_sklearn_trial = create_trial(self)
         auto_sklearn_trial.clf_params = base_params
         self.trial_list.append(auto_sklearn_trial)
@@ -657,7 +695,6 @@ class Study(object):
 
     def add_preprocessor_trial(self, trial):
         pass
-
 
     def _pipe_add(self, step):
         """add steps to Study.pipeline
@@ -690,10 +727,12 @@ class Study(object):
         export_model_path = export_model_path + model_name
         joblib.dump(self.pipeline, export_model_path)
 
+
 def create_trial(study: Study):
     trial_id = study.storage.create_new_trial_id(study.study_id)
     trial = Trial(study, trial_id)
     return trial
+
 
 def get_storage(storage):
     # type: (Union[None, str, BaseStorage]) -> BaseStorage
@@ -715,6 +754,7 @@ def create_study(X, y,
                  sample_params=dict(),
                  trials_list=list(),
                  export_model_path=None,
+                 precision=np.float64
                  ):
     # type: (...) -> Study
     """Create a new :class:`~diego.study.Study`.
@@ -731,6 +771,8 @@ def create_study(X, y,
             automatically.
         is_auto_bin: do autobinning
         bin_params: binning method
+        precision {[np.dtype]} -- precision:
+                np.dtypes, float16, float32, float64 for data precision to reduce memory size. (default: {np.float64})
     Returns:
         A :class:`~diego.study.Study` object.
 
@@ -758,7 +800,8 @@ def create_study(X, y,
         sample_method=sample_method,
         is_autobin=is_autobin,
         bin_params=bin_params,
-        export_model_path=export_model_path)
+        export_model_path=export_model_path,
+        precision=precision)
 
     if direction == 'minimize':
         _direction = basic.StudyDirection.MINIMIZE
@@ -767,7 +810,8 @@ def create_study(X, y,
     else:
         raise ValueError(
             'Please set either \'minimize\' or \'maximize\' to direction.')
-
+    
+    X = X.astype(dtype=precision, copy=False)
     study.storage.direction = _direction
     study.storage.set_train_storage(X, y)
 
