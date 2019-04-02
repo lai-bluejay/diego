@@ -638,10 +638,11 @@ class Study(object):
         home_dir = os.getenv("HOME")
         tmp_folder = home_dir + tmp_folder
         output_folder = home_dir + output_folder
-        
-        if not os.path.existing(tmp_folder):
+        if not os.path.exists(home_dir + '/tmp'):
+            os.mkdir(home_dir+"/tmp")
+        if not os.path.exists(tmp_folder):
             os.mkdir(tmp_folder)
-        if not os.path.existing(output_folder):
+        if not os.path.exists(output_folder):
             os.mkdir(output_folder)
 
         
