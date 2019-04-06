@@ -10,7 +10,7 @@ Email: lai.bluejay@gmail.com
 import copy
 from datetime import datetime
 import threading
-
+import uuid
 import numpy as np
 from tpot import TPOTClassifier
 
@@ -22,9 +22,13 @@ from typing import List  # NOQA
 from typing import Optional  # NOQA
 
 DEFAULT_STUDY_NAME_PREFIX = 'no-name-'
-IN_MEMORY_STORAGE_STUDY_ID = 0
-IN_MEMORY_STORAGE_STUDY_UUID = '00000000-0000-0000-0000-000000000000'
 
+def generate_uuid():
+    import time
+    random_uuid = uuid.uuid4()
+    st = str(time.time())
+    nid = uuid.uuid5(random_uuid, str(st))
+    return nid
 
 class InMemoryStorage(object):
     """Storage class that stores data in memory of the Python process.
@@ -40,7 +44,8 @@ class InMemoryStorage(object):
         self._direction = basic.StudyDirection.NOT_SET
         self._study_user_attrs = {}  # type: Dict[str, Any]
         self._study_system_attrs = {}  # type: Dict[str, Any]
-        self.study_name = DEFAULT_STUDY_NAME_PREFIX + IN_MEMORY_STORAGE_STUDY_UUID  # type: str
+        self.study_uuid = generate_uuid()
+        self.study_name = DEFAULT_STUDY_NAME_PREFIX + str(self.study_uuid)  # type: str
         self.X_train = None
         self.y_train = None
         self.X_test = None
@@ -63,8 +68,8 @@ class InMemoryStorage(object):
 
         if study_name is not None:
             self.study_name = study_name
-
-        return IN_MEMORY_STORAGE_STUDY_ID
+            
+        return self.study_uuid
 
     @property
     def direction(self):
@@ -113,12 +118,12 @@ class InMemoryStorage(object):
         if study_name != self.study_name:
             raise ValueError("No such study {}.".format(study_name))
 
-        return IN_MEMORY_STORAGE_STUDY_ID
+        return self.study_uuid
 
     def get_study_id_from_trial_id(self, trial_id):
         # type: (int) -> int
 
-        return IN_MEMORY_STORAGE_STUDY_ID
+        return self.study_uuid
 
     def get_study_name_from_id(self, study_id):
         # type: (int) -> str
@@ -132,7 +137,7 @@ class InMemoryStorage(object):
         best_trial = None
         n_complete_trials = len([t for t in self.trials if t.state == basic.TrialState.COMPLETE])
         if n_complete_trials > 0:
-            best_trial = self.get_best_trial(IN_MEMORY_STORAGE_STUDY_ID)
+            best_trial = self.get_best_trial(self.study_uuid)
 
         datetime_start = None
         if len(self.trials) > 0:
@@ -140,7 +145,7 @@ class InMemoryStorage(object):
 
         return [
             basic.StudySummary(
-                study_id=IN_MEMORY_STORAGE_STUDY_ID,
+                study_id=self.study_uuid,
                 study_name=self.study_name,
                 direction=self._direction,
                 best_trial=best_trial,
@@ -265,9 +270,9 @@ class InMemoryStorage(object):
     def _check_study_id(self, study_id):
         # type: (int) -> None
 
-        if study_id != IN_MEMORY_STORAGE_STUDY_ID:
+        if study_id != self.study_uuid:
             raise ValueError('study_id is supposed to be {} in {}.'.format(
-                IN_MEMORY_STORAGE_STUDY_ID, self.__class__.__name__))
+                self.study_uuid, self.__class__.__name__))
     
     def get_trial_user_attrs(self, trial_id):
         # type: (int) -> Dict[str, Any]
@@ -290,7 +295,6 @@ class InMemoryStorage(object):
         return [(t.params_in_internal_repr[param_name], t.value) for t in all_trials
                 if (t.value is not None and param_name in t.params
                     and t.state is basic.TrialState.COMPLETE)
-                # TODO(Akiba): We also want to use pruned results
                 ]
 
     # Methods for the median pruner

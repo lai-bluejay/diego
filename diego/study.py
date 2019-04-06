@@ -127,6 +127,7 @@ class Study(object):
                 self.bin_params = dict()
                 self.bin_params['binning_method'] = 'xgb'
             self.binner = AutobinningTransform(**self.bin_params)
+        # uuid4+time.time(), uuid5
         self.study_id = self.storage.get_study_id_from_name(study_name)
         self.logger = logging.get_logger(__name__)
         self.trial_list = []
@@ -637,14 +638,17 @@ class Study(object):
             pass
         from pathlib import Path
         home_dir =str(Path.home())
-        tmp_folder = home_dir + tmp_folder
-        output_folder = home_dir + output_folder
+        tmp_folder = home_dir + tmp_folder + "_" + str(self.study_id)
+        output_folder = home_dir + output_folder + "_" + str(self.study_id)
         if not os.path.exists(home_dir + '/tmp'):
             os.mkdir(home_dir+"/tmp")
         if not os.path.exists(tmp_folder):
             os.mkdir(tmp_folder)
         if not os.path.exists(output_folder):
             os.mkdir(output_folder)
+        self.logger.info('The tmp result will saved in {}'.format(tmp_folder))
+        self.logger.info('The output of classifier will save in {}'.format(output_folder))
+        self.logger.info('And it will delete tmp folder after terminate.')
 
         
         base_params = {'n_jobs': n_jobs,
