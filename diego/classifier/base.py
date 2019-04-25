@@ -12,7 +12,10 @@ import numpy as np
 
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils import check_X_y, check_array
+import sklearn.utils
 from sklearn.metrics.classification import type_of_target
+
+from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
 
 from autosklearn.automl import BaseAutoML
 from diego.basic import *
@@ -31,7 +34,7 @@ class DiegoClassifier(BaseAutoML):
                               'binary': BINARY_CLASSIFICATION}
 
     def _check_y(self, y):
-        y = sklearn.utils.check_array(y, ensure_2d=False)
+        y = check_array(y, ensure_2d=False)
 
         y = np.atleast_1d(y)
         if y.ndim == 2 and y.shape[1] == 1:

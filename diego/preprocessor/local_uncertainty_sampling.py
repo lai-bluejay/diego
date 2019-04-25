@@ -3,7 +3,6 @@
 """
 BoeingML.local_uncertainty_sampling was created on 2017/8/9.
 Author: Charles_Lai
-Email: laihongchang@daixiaomi.com
 Email: lai.bluejay@gmail.com
 """
 

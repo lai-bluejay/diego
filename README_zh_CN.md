@@ -58,11 +58,10 @@ ideas for releases in the future
 - [ ] 回归。
 - [ ] add documents.
 - [ ] 不同类型的Trial。TPE， BayesOpt， RandomSearch
-- [ ] 自定义的Trial。Trials by custom Classifier (like sklearn, xgboost)
+- [ ] 自定义的Trial。Trials by custom Classifier (like sklearn, xgboost, lightgbm)
 - [ ] 模型保存。model persistence
 - [ ] 模型输出。model output
 - [ ] basic Classifier
-- [ ] fix mac os hanged in optimize pipeline
 - [ ] add preprocessor
 - [ ] add FeatureTools for automated feature engineering
 

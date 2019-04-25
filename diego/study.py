@@ -28,8 +28,9 @@ from diego.preprocessor import AutobinningTransform, LocalUncertaintySampling
 from diego.trials import Trial
 from diego import trials as trial_module
 from diego import basic
-from diego.core import Storage
+from diego.core import Storage, generate_uuid
 from diego import metrics as diego_metrics
+from diego.ensemble_net import Ensemble, EnsembleStack, EnsembleStackClassifier, Combiner
 
 
 import collections
@@ -135,6 +136,12 @@ class Study(object):
         self.pipeline = None
         self.export_model_path = export_model_path
         self.precision = precision
+
+        self.stack = EnsembleStack()
+        self.layer = list()
+        self.ensemble = None
+
+
 
     def __getstate__(self):
         # type: () -> Dict[Any, Any]
@@ -256,6 +263,7 @@ class Study(object):
                 by this logic.
 
         """
+
         X_test, y_test = check_X_y(X_test, y_test)
         if not precision:
             X_test = X_test.astype(dtype=self.precision, copy=False)
@@ -281,6 +289,14 @@ class Study(object):
                 'Binning is done. Binning would transform test_data to new bin.')
             self._pipe_add(self.binner)
         n_jobs = basic.get_approp_n_jobs(n_jobs)
+
+        y = np.copy(self.storage.y_train)
+        self.classes_ = np.unique(y)
+        n_classes = len(self.classes_)
+        self.n_classes = n_classes
+        classes_ = self.classes_
+
+
         if self.trial_list is None or self.trial_list == []:
             self.logger.warning('no trials, init by default params.')
             self.trial_list = self._init_trials(n_jobs)
@@ -298,8 +314,21 @@ class Study(object):
             # do not generate clf in advanced.
             self._optimize_sequential(
                 self.trial_list, timeout, catch, metrics=metrics)
+            self._make_ensemble()
             self._pipe_add(self.best_trial.clf)
             self._export_model(self.export_model_path)
+
+    def _make_ensemble(self):
+       
+        ensemble = Ensemble(self.layer, classes=self.classes_)
+        self.stack.add_layer(ensemble)
+        combiner = Combiner('mean')
+        self.ensemble = EnsembleStackClassifier(stack=self.stack, combiner=combiner)
+        self.ensemble.refit(self.storage.X_train, self.storage.y_train)
+        test_res = self.ensemble.predict(self.storage.X_test)
+        metrics_func = self._get_metric(self.metrics)
+        result = metrics_func(self.storage.y_test, test_res)
+        self.logger.info("The ensemble of all trials get the result: {0}   {1}".format(self.metrics, result))
 
     def show_models(self):
         for step in self.pipeline.steps:
@@ -511,6 +540,7 @@ class Study(object):
         metrics_func = self._get_metric(metrics)
         try:
             trial = self.fit_autosk_trial(trial, metric=metrics_func)
+            self.layer.append(trial.clf)
             y_pred = trial.clf.predict_proba(self.storage.X_test)
             result = metrics_func(self.storage.y_test, y_pred)
         # except basic.TrialPruned as e:
@@ -638,46 +668,50 @@ class Study(object):
             pass
         from pathlib import Path
         home_dir =str(Path.home())
-        tmp_folder = home_dir + tmp_folder + "_" + str(self.study_id)
-        output_folder = home_dir + output_folder + "_" + str(self.study_id)
         if not os.path.exists(home_dir + '/tmp'):
             os.mkdir(home_dir+"/tmp")
-        if not os.path.exists(tmp_folder):
-            os.mkdir(tmp_folder)
-        if not os.path.exists(output_folder):
-            os.mkdir(output_folder)
-        self.logger.info('The tmp result will saved in {}'.format(tmp_folder))
-        self.logger.info('The output of classifier will save in {}'.format(output_folder))
-        self.logger.info('And it will delete tmp folder after terminate.')
-
         
-        base_params = {'n_jobs': n_jobs,
-                       "time_left_for_this_task": time_left_for_this_task,
-                       "per_run_time_limit": per_run_time_limit,
-                       "initial_configurations_via_metalearning": initial_configurations_via_metalearning,
-                       "ensemble_size": ensemble_size,
-                       "ensemble_nbest": ensemble_nbest,
-                       "ensemble_memory_limit": ensemble_memory_limit,
-                       "seed": seed,
-                       "ml_memory_limit": ml_memory_limit,
-                       "include_estimators": include_estimators,
-                       "exclude_estimators": exclude_estimators,
-                       "include_preprocessors": include_preprocessors,
-                       "exclude_preprocessors": exclude_preprocessors,
-                       "resampling_strategy": resampling_strategy,
-                       "resampling_strategy_arguments": resampling_strategy_arguments, 
-                       "tmp_folder":tmp_folder, "output_folder": output_folder, 
-                       "delete_tmp_folder_after_terminate": delete_tmp_folder_after_terminate, 
-                       "delete_output_folder_after_terminate": delete_output_folder_after_terminate, 
-                       "shared_mode": shared_mode, "disable_evaluator_output": disable_evaluator_output, 
-                       "get_smac_object_callback": get_smac_object_callback, 
-                       "smac_scenario_args": smac_scenario_args, 
-                       "logging_config": logging_config}
-        print(base_params)
-        # n_jobs ":  basic.get_approp_n_jobs(n_jobs)
-        auto_sklearn_trial = create_trial(self)
-        auto_sklearn_trial.clf_params = base_params
-        self.trial_list.append(auto_sklearn_trial)
+        # split to several trial, and ensemble them
+        for est in include_estimators:
+            auto_sklearn_trial = create_trial(self)
+            train_folder = home_dir + tmp_folder + "_" + str(self.study_id) + "_" + str(auto_sklearn_trial.number)
+            train_output_folder = home_dir + output_folder + "_" + str(self.study_id) + "_" + str(auto_sklearn_trial.number)
+            
+            if not os.path.exists(tmp_folder):
+                os.mkdir(tmp_folder)
+            if not os.path.exists(output_folder):
+                os.mkdir(output_folder)
+            self.logger.info('The tmp result will saved in {}'.format(tmp_folder))
+            self.logger.info('The output of classifier will save in {}'.format(output_folder))
+            self.logger.info('And it will delete tmp folder after terminate.')
+
+
+            base_params = {'n_jobs': n_jobs,
+                        "time_left_for_this_task": time_left_for_this_task,
+                        "per_run_time_limit": per_run_time_limit,
+                        "initial_configurations_via_metalearning": initial_configurations_via_metalearning,
+                        "ensemble_size": ensemble_size,
+                        "ensemble_nbest": ensemble_nbest,
+                        "ensemble_memory_limit": ensemble_memory_limit,
+                        "seed": seed,
+                        "ml_memory_limit": ml_memory_limit,
+                        "include_estimators": [est],
+                        "exclude_estimators": exclude_estimators,
+                        "include_preprocessors": include_preprocessors,
+                        "exclude_preprocessors": exclude_preprocessors,
+                        "resampling_strategy": resampling_strategy,
+                        "resampling_strategy_arguments": resampling_strategy_arguments, 
+                        "tmp_folder":train_folder, "output_folder": train_output_folder, 
+                        "delete_tmp_folder_after_terminate": delete_tmp_folder_after_terminate, 
+                        "delete_output_folder_after_terminate": delete_output_folder_after_terminate, 
+                        "shared_mode": shared_mode, "disable_evaluator_output": disable_evaluator_output, 
+                        "get_smac_object_callback": get_smac_object_callback, 
+                        "smac_scenario_args": smac_scenario_args, 
+                        "logging_config": logging_config}
+            # n_jobs ":  basic.get_approp_n_jobs(n_jobs)
+            
+            auto_sklearn_trial.clf_params = base_params
+            self.trial_list.append(auto_sklearn_trial)
         return auto_sklearn_trial
 
     # def generate_tpot_trial(self, mode='fast', **kwargs):

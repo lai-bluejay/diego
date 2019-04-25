@@ -32,7 +32,7 @@ install:
   # the first package to install (for every conda install command) otherwise
   # numpy may be automatically upgraded.
 
-  - conda install --yes pip gcc swig libgcc=4.8.5
+  - conda install --yes gcc swig libgcc=4.8.5
   - export PATH=/home/travis/miniconda3/envs/test/bin:$PATH
   - conda install --yes numpy pandas scikit-learn
 
@@ -40,6 +40,7 @@ install:
 
   # - pip install ...
   # if some package depends on numpy, Numpy should be installed with conda.
+  - pip install -U pip
   - pip install codecov
   - pip install -r requirements.txt
 

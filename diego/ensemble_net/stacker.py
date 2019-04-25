@@ -3,17 +3,16 @@
 """
 conan.stacker was created on 2017/10/17.
 Author: Charles_Lai
-Email: laihongchang@daixiaomi.com
 Email: lai.bluejay@gmail.com
 """
 import numpy as np
 
-from base import Ensemble
-from combination import Combiner
-
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import roc_auc_score
 
+from diego.ensemble_net.base import Ensemble
+from diego.ensemble_net.combination import Combiner
+from diego.classifier.logistic_regression_sk import LogisticRegressionSK
 
 class EnsembleStack(object):
     def __init__(self, mode='probs', cv=5):
@@ -66,8 +65,7 @@ class EnsembleStack(object):
             out = layer.output(input_, mode=self.mode)
             input_ = out[:, 1:, :].reshape(
                 out.shape[0], (out.shape[1] - 1) * out.shape[2])
-
-        return out
+        return input_
 
 
 class EnsembleStackClassifier(object):
@@ -85,14 +83,46 @@ class EnsembleStackClassifier(object):
         else:
             raise ValueError('Invalid combiner!')
 
+        self.clf = self._make_clf()
+
+    @staticmethod
+    def _make_clf():
+        import autosklearn.classification
+        import autosklearn.pipeline.components.classification
+        from autosklearn.pipeline.components.base import AutoSklearnClassificationAlgorithm
+        from autosklearn.pipeline.constants import DENSE, SIGNED_DATA, UNSIGNED_DATA, \
+            PREDICTIONS
+        autosklearn.pipeline.components.classification.add_classifier(
+        LogisticRegressionSK)
+        clf = autosklearn.classification.AutoSklearnClassifier(
+            time_left_for_this_task=30,
+            per_run_time_limit=10,
+            include_estimators=['LogisticRegressionSK'],
+        )
+        return clf
+
+
     def fit(self, X, y):
         self.stack.fit(X, y)
         return self
 
+    def refit(self, X, y):
+        out = self.stack.output(X)
+    
+        self.clf.fit(out, y)
+
     def predict(self, X):
+        out = self.stack.output(X)
+        try:
+            y_pred = self.clf.predict(out)
+        except:
+            raise Exception('You must refit ensemble stacker')
+        return y_pred
+
+    def output(self, X):
         out = self.stack.output(X)
         return self.combiner.combine(out)
 
-    def predict_proba(self, X):
+    def output_proba(self, X):
         out = self.stack.output(X)
         return np.mean(out, axis=2)

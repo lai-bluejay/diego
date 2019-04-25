@@ -3,7 +3,6 @@
 """
 conan.base was created on 2017/10/17.
 Author: Charles_Lai
-Email: laihongchang@daixiaomi.com
 Email: lai.bluejay@gmail.com
 
 参考资料：
@@ -47,7 +46,7 @@ from sklearn.metrics import accuracy_score, roc_auc_score
 # 后续参考sklearn API的写法。
 from sklearn.ensemble import BaseEnsemble, GradientBoostingClassifier
 from xgboost import Booster
-from combination import Combiner
+from diego.ensemble_net.combination import Combiner
 
 def transform2votes(output, n_classes):
 
@@ -120,12 +119,16 @@ class Ensemble(object):
     当前要求每个classifier都有predict方法，在使用不同的合并条件的时候，可能需要predict_proba方法。
     """
 
-    def __init__(self, classifiers=None):
+    def __init__(self, classifiers=None, classes=None):
 
         if classifiers is None:
             self.classifiers = []
         else:
             self.classifiers = classifiers
+        if classes is None:
+            self.classes_ = np.array([0, 1])
+        else:
+            self.classes_ = classes
 
     def add(self, classifier):
         self.classifiers.append(classifier)
@@ -137,10 +140,6 @@ class Ensemble(object):
         self.classifiers = self.add_classifiers(ensemble.classifiers)
 
     def get_classes(self):
-        classes = set()
-        for c in self.classifiers:
-            classes = classes.union(set(c.classes_))
-        self.classes_ = list(classes)
         return self.classes_
 
     def output(self, X, mode='vote'):
@@ -167,9 +166,13 @@ class Ensemble(object):
 
         else:
             # assumes that all classifiers were
-            # trained with the same number of classes
-            classes__ = self.get_classes()
-            n_classes = len(classes__)
+            # trained with the same number of classes\
+            try:
+                classes__ = self.get_classes()
+                n_classes = len(classes__)
+            except:
+                classes__ = np.array([0, 1])
+                n_classes = 2
             out = np.zeros((X.shape[0], n_classes, len(self.classifiers)))
 
             for i, c in enumerate(self.classifiers):
@@ -177,9 +180,9 @@ class Ensemble(object):
                 if mode == 'probs':
                     probas = np.zeros((X.shape[0], n_classes))
                     if isinstance(c, Booster):
-                        probas[:, list(c.classes_)] = c.predict(X)
+                        probas[:, list(self.classes_)] = c.predict(X)
                     else:
-                        probas[:, list(c.classes_)] = c.predict_proba(X)
+                        probas[:, list(self.classes_)] = c.predict_proba(X)
                     out[:, :, i] = probas
 
                 elif mode == 'vote':

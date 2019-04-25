@@ -3,10 +3,9 @@
 """
 conan.__init__.py was created on 2017/10/17.
 Author: Charles_Lai
-Email: laihongchang@daixiaomi.com
 Email: lai.bluejay@gmail.com
 """
 
-from base import Ensemble, EnsembleClassifier
-from stacker import EnsembleStack, EnsembleStackClassifier
-from combination import Combiner
+from diego.ensemble_net.base import Ensemble, EnsembleClassifier
+from diego.ensemble_net.stacker import EnsembleStack, EnsembleStackClassifier
+from diego.ensemble_net.combination import Combiner

@@ -3,7 +3,6 @@
 """
 conan.combination was created on 2017/10/17.
 Author: Charles_Lai
-Email: laihongchang@daixiaomi.com
 Email: lai.bluejay@gmail.com
 """
 import numpy as np
