@@ -89,9 +89,6 @@ class EnsembleStackClassifier(object):
     def _make_clf():
         import autosklearn.classification
         import autosklearn.pipeline.components.classification
-        from autosklearn.pipeline.components.base import AutoSklearnClassificationAlgorithm
-        from autosklearn.pipeline.constants import DENSE, SIGNED_DATA, UNSIGNED_DATA, \
-            PREDICTIONS
         autosklearn.pipeline.components.classification.add_classifier(
         LogisticRegressionSK)
         clf = autosklearn.classification.AutoSklearnClassifier(

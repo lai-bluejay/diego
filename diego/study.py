@@ -31,7 +31,7 @@ from diego import basic
 from diego.core import Storage, generate_uuid
 from diego import metrics as diego_metrics
 from diego.ensemble_net import Ensemble, EnsembleStack, EnsembleStackClassifier, Combiner
-
+from diego.classifier import LogisticRegressionSK, LogisticRegressionSMAC
 
 import collections
 import datetime
@@ -44,7 +44,9 @@ from six.moves import queue
 import time
 from sklearn.utils import check_X_y
 from autosklearn.classification import AutoSklearnClassifier
-from tpot import TPOTClassifier
+from autosklearn.pipeline.components import classification
+classification.add_classifier(LogisticRegressionSK)
+classification.add_classifier(LogisticRegressionSMAC)
 
 ObjectiveFuncType = Callable[[trial_module.Trial], float]
 
@@ -102,7 +104,7 @@ class Study(object):
         
         Arguments:
             study_name {[type]} -- [description]
-        
+
         Keyword Arguments:
             sample_params {[type]} -- [description] (default: {dict()})
             is_autobin {bool} -- [description] (default: {False})
@@ -140,6 +142,12 @@ class Study(object):
         self.stack = EnsembleStack()
         self.layer = list()
         self.ensemble = None
+        opt_est = ['gaussian_nb','random_forest', 'sgd', 'xgradient_boosting'] + [t for t in classification._addons.components]
+        hint = """
+        You can generate trial by study.generate_trial(mode='fast').
+        The option of trial estimator is recomended: {}
+        """.format(str(opt_est))
+        self.logger.warn(hint)
 
 
 
@@ -325,6 +333,7 @@ class Study(object):
         combiner = Combiner('mean')
         self.ensemble = EnsembleStackClassifier(stack=self.stack, combiner=combiner)
         self.ensemble.refit(self.storage.X_train, self.storage.y_train)
+        self.logger.info(self.ensemble.clf.show_models())
         test_res = self.ensemble.predict(self.storage.X_test)
         metrics_func = self._get_metric(self.metrics)
         result = metrics_func(self.storage.y_test, test_res)
@@ -622,7 +631,7 @@ class Study(object):
 
     def generate_trial(self, mode='fast', n_jobs=-1, time_left_for_this_task=3600, per_run_time_limit=360,
                        initial_configurations_via_metalearning=25, ensemble_size=50, ensemble_nbest=50,
-                       ensemble_memory_limit=4096, seed=1, ml_memory_limit=10240, include_estimators=None,
+                       ensemble_memory_limit=4096, seed=1, ml_memory_limit=10240, include_estimators=['gaussian_nb', 'random_forest', 'sgd', 'xgradient_boosting', 'LogisticRegressionSK', 'LogisticRegressionSMAC'],
                        exclude_estimators=None, include_preprocessors=None, exclude_preprocessors=None,
                        resampling_strategy='cv', resampling_strategy_arguments={'folds': 5},
                        tmp_folder="/tmp/autosklearn_tmp", output_folder="/tmp/autosklearn_output", delete_tmp_folder_after_terminate=True, delete_output_folder_after_terminate=True, 
@@ -634,7 +643,8 @@ class Study(object):
         classifiers_ = ["adaboost", "decision_tree", "extra_trees",
                         "gradient_boosting", "k_nearest_neighbors",
                         "libsvm_svc", "random_forest", "gaussian_nb",
-                        "decision_tree", "xgradient_boosting"]
+                        "decision_tree", "xgradient_boosting", 
+                        "LogisticRegressionSK", "LogisticRegressionSMAC"]
 
         # Combinations of tree-based models with feature learning:
         regressors_ = ["adaboost", "decision_tree", "extra_trees",

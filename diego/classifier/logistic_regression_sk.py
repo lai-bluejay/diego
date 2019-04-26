@@ -11,8 +11,6 @@ import numpy as np
 # from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.linear_model.base import LinearClassifierMixin, SparseCoefMixin, BaseEstimator
 from sklearn.linear_model import LogisticRegression
-import torch.nn as nn
-import torch
 
 from ConfigSpace.configuration_space import ConfigurationSpace
 from ConfigSpace.hyperparameters import CategoricalHyperparameter, \

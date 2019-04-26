@@ -2,7 +2,7 @@ setuptools
 nose
 Cython
 pynisher>=0.4.2
-
+sklearn-contrib-lightning==0.5.0
 numpy==1.16.2
 scipy==1.2.1
 scikit-learn==0.20.3
