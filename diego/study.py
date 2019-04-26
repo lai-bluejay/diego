@@ -774,8 +774,11 @@ class Study(object):
             return
             # export_model_path = '/tmp/'+model_name
         model_name = 'diego_model_' + str(self.study_name) + '.joblib'
-        export_model_path = export_model_path + model_name
-        joblib.dump(self.pipeline, export_model_path)
+        to_export_model_path = export_model_path + model_name
+        joblib.dump(self.pipeline, to_export_model_path)
+        ensemble_name = 'diego_ensemble_' + str(self.study_name) + '.joblib'
+        export_ensemble_path = export_model_path + ensemble_name
+        joblib.dump(self.pipeline, export_ensemble_path)
 
 
 def create_trial(study: Study):
