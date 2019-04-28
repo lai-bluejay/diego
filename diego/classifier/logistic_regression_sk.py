@@ -92,7 +92,7 @@ class LogisticRegressionSK(AutoSklearnClassificationAlgorithm):
         )
 
         class_weight = CategoricalHyperparameter(
-            name='class_weight', choices=['balanced', None], default_value='balanced'
+            name='class_weight', choices=['balanced'], default_value='balanced'
         )
         penalty = CategoricalHyperparameter(
             name='penalty', choices=['l1', 'l2'], default_value='l2'

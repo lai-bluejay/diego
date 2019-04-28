@@ -21,6 +21,9 @@ from typing import Dict  # NOQA
 from typing import List  # NOQA
 from typing import Optional  # NOQA
 
+import gc
+gc.enable()
+
 DEFAULT_STUDY_NAME_PREFIX = 'no-name-'
 
 def generate_uuid():
@@ -330,3 +333,11 @@ class InMemoryStorage(object):
         # type: () -> None
 
         pass
+
+    def clean_storage(self):
+        self.X_test = None
+        self.y_test = None
+        self.X_train = None
+        self.y_train  = None
+        gc.collect()
+        

@@ -19,6 +19,7 @@ import os
 from collections import defaultdict
 import numpy as np
 
+
 from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.utils import validation
 from sklearn.externals import joblib, six
@@ -45,6 +46,10 @@ import time
 from sklearn.utils import check_X_y
 from autosklearn.classification import AutoSklearnClassifier
 from autosklearn.pipeline.components import classification
+import gc
+gc.enable()
+
+
 classification.add_classifier(LogisticRegressionSK)
 classification.add_classifier(LogisticRegressionSMAC)
 
@@ -276,23 +281,27 @@ class Study(object):
         if not precision:
             X_test = X_test.astype(dtype=self.precision, copy=False)
         self.storage.set_test_storage(X_test, y_test)
+        del X_test
+        del y_test
+        gc.collect()
         # TODO Preprocess Trial
         if self.sample_method == 'lus':
             self.logger.info('Sampling training dataset with lus. Origin data shape is {0}'.format(
                 str(self.storage.X_train.shape)))
-            X_train, y_train = self.storage.X_train, self.storage.y_train
-            X_train, y_train = self.sampler.fit_transform(X_train, y_train)
+            # X_train, y_train = self.storage.X_train, self.storage.y_train
+            self.storage.X_train, self.storage.y_train = self.sampler.fit_transform(self.storage.X_train, self.storage.y_train)
             self.logger.info(
-                'Sampling is done. Sampled data shape is {0}'.format(str(X_train.shape)))
-            self.storage.set_train_storage(X_train, y_train)
+                'Sampling is done. Sampled data shape is {0}'.format(str(self.storage.X_train.shape)))
+            # self.storage.set_train_storage(X_train, y_train)
+
         if self.is_autobin:
             self.logger.info("begin to autobinning data by {}  with method {}".format(
                 type(self.binner), self.binner.binning_method))
             self.binner.fit(self.storage.X_train, self.storage.y_train)
-            X_train = self.binner.transform(self.storage.X_train)
-            X_test = self.binner.transform(X_test)
-            self.storage.set_train_storage(X_train, self.storage.y_train)
-            self.storage.set_test_storage(X_test, y_test)
+            self.storage.X_train = self.binner.transform(self.storage.X_train)
+            self.storage.X_test = self.binner.transform(self.storage.X_test)
+            # self.storage.set_train_storage(X_train, self.storage.y_train)
+            # self.storage.set_test_storage(X_test, y_test)
             self.logger.warning(
                 'Binning is done. Binning would transform test_data to new bin.')
             self._pipe_add(self.binner)
@@ -460,6 +469,7 @@ class Study(object):
                     break
 
             self._run_trial(trial, catch, metrics=metrics)
+            gc.collect()
 
     # TODO multi clf
     def _optimize_parallel(
@@ -614,10 +624,10 @@ class Study(object):
         trial_number = trial.number
         params = trial.clf_params
         autosk_clf = AutoSklearnClassifier(**params)
-        X_train = self.storage.X_train
-        y_train = self.storage.y_train
+        # X_train = self.storage.X_train
+        # y_train = self.storage.y_train
         # TODO metrics to trial
-        autosk_clf.fit(X_train, y_train, metric=metric)
+        autosk_clf.fit(self.storage.X_train, self.storage.y_train, metric=metric)
         if autosk_clf.resampling_strategy not in ['holdout', 'holdout-iterative-fit']:
             self.logger.warning(
                 'Predict is currently not implemented for resampling strategy, refit it.')
@@ -684,6 +694,7 @@ class Study(object):
         # split to several trial, and ensemble them
         for est in include_estimators:
             auto_sklearn_trial = create_trial(self)
+            # auto_sklearn_trial.storage.clean_storage()
             train_folder = home_dir + tmp_folder + "_" + str(self.study_id) + "_" + str(auto_sklearn_trial.number)
             train_output_folder = home_dir + output_folder + "_" + str(self.study_id) + "_" + str(auto_sklearn_trial.number)
             
