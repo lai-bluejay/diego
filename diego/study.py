@@ -641,7 +641,7 @@ class Study(object):
 
     def generate_trial(self, mode='fast', n_jobs=-1, time_left_for_this_task=3600, per_run_time_limit=360,
                        initial_configurations_via_metalearning=25, ensemble_size=50, ensemble_nbest=50,
-                       ensemble_memory_limit=4096, seed=1, ml_memory_limit=10240, include_estimators=['gaussian_nb', 'random_forest', 'sgd', 'xgradient_boosting', 'LogisticRegressionSK', 'LogisticRegressionSMAC'],
+                       ensemble_memory_limit=4096, seed=1, ml_memory_limit=10240, include_estimators=['random_forest',  'xgradient_boosting', 'LogisticRegressionSK', 'LogisticRegressionSMAC'],
                        exclude_estimators=None, include_preprocessors=None, exclude_preprocessors=None,
                        resampling_strategy='cv', resampling_strategy_arguments={'folds': 5},
                        tmp_folder="/tmp/autosklearn_tmp", output_folder="/tmp/autosklearn_output", delete_tmp_folder_after_terminate=True, delete_output_folder_after_terminate=True, 
@@ -692,47 +692,47 @@ class Study(object):
             os.mkdir(home_dir+"/tmp")
         
         # split to several trial, and ensemble them
-        for est in include_estimators:
-            auto_sklearn_trial = create_trial(self)
-            # auto_sklearn_trial.storage.clean_storage()
-            train_folder = home_dir + tmp_folder + "_" + str(self.study_id) + "_" + str(auto_sklearn_trial.number)
-            train_output_folder = home_dir + output_folder + "_" + str(self.study_id) + "_" + str(auto_sklearn_trial.number)
-            
-            if not os.path.exists(tmp_folder):
-                os.mkdir(tmp_folder)
-            if not os.path.exists(output_folder):
-                os.mkdir(output_folder)
-            self.logger.info('The tmp result will saved in {}'.format(tmp_folder))
-            self.logger.info('The output of classifier will save in {}'.format(output_folder))
-            self.logger.info('And it will delete tmp folder after terminate.')
+        # for est in include_estimators:
+        auto_sklearn_trial = create_trial(self)
+        # auto_sklearn_trial.storage.clean_storage()
+        train_folder = home_dir + tmp_folder + "_" + str(self.study_id) + "_" + str(auto_sklearn_trial.number)
+        train_output_folder = home_dir + output_folder + "_" + str(self.study_id) + "_" + str(auto_sklearn_trial.number)
+        
+        if not os.path.exists(tmp_folder):
+            os.mkdir(tmp_folder)
+        if not os.path.exists(output_folder):
+            os.mkdir(output_folder)
+        self.logger.info('The tmp result will saved in {}'.format(tmp_folder))
+        self.logger.info('The output of classifier will save in {}'.format(output_folder))
+        self.logger.info('And it will delete tmp folder after terminate.')
 
 
-            base_params = {'n_jobs': n_jobs,
-                        "time_left_for_this_task": time_left_for_this_task,
-                        "per_run_time_limit": per_run_time_limit,
-                        "initial_configurations_via_metalearning": initial_configurations_via_metalearning,
-                        "ensemble_size": ensemble_size,
-                        "ensemble_nbest": ensemble_nbest,
-                        "ensemble_memory_limit": ensemble_memory_limit,
-                        "seed": seed,
-                        "ml_memory_limit": ml_memory_limit,
-                        "include_estimators": [est],
-                        "exclude_estimators": exclude_estimators,
-                        "include_preprocessors": include_preprocessors,
-                        "exclude_preprocessors": exclude_preprocessors,
-                        "resampling_strategy": resampling_strategy,
-                        "resampling_strategy_arguments": resampling_strategy_arguments, 
-                        "tmp_folder":train_folder, "output_folder": train_output_folder, 
-                        "delete_tmp_folder_after_terminate": delete_tmp_folder_after_terminate, 
-                        "delete_output_folder_after_terminate": delete_output_folder_after_terminate, 
-                        "shared_mode": shared_mode, "disable_evaluator_output": disable_evaluator_output, 
-                        "get_smac_object_callback": get_smac_object_callback, 
-                        "smac_scenario_args": smac_scenario_args, 
-                        "logging_config": logging_config}
-            # n_jobs ":  basic.get_approp_n_jobs(n_jobs)
-            
-            auto_sklearn_trial.clf_params = base_params
-            self.trial_list.append(auto_sklearn_trial)
+        base_params = {'n_jobs': n_jobs,
+                    "time_left_for_this_task": time_left_for_this_task,
+                    "per_run_time_limit": per_run_time_limit,
+                    "initial_configurations_via_metalearning": initial_configurations_via_metalearning,
+                    "ensemble_size": ensemble_size,
+                    "ensemble_nbest": ensemble_nbest,
+                    "ensemble_memory_limit": ensemble_memory_limit,
+                    "seed": seed,
+                    "ml_memory_limit": ml_memory_limit,
+                    "include_estimators": include_estimators,
+                    "exclude_estimators": exclude_estimators,
+                    "include_preprocessors": include_preprocessors,
+                    "exclude_preprocessors": exclude_preprocessors,
+                    "resampling_strategy": resampling_strategy,
+                    "resampling_strategy_arguments": resampling_strategy_arguments, 
+                    "tmp_folder":train_folder, "output_folder": train_output_folder, 
+                    "delete_tmp_folder_after_terminate": delete_tmp_folder_after_terminate, 
+                    "delete_output_folder_after_terminate": delete_output_folder_after_terminate, 
+                    "shared_mode": shared_mode, "disable_evaluator_output": disable_evaluator_output, 
+                    "get_smac_object_callback": get_smac_object_callback, 
+                    "smac_scenario_args": smac_scenario_args, 
+                    "logging_config": logging_config}
+        # n_jobs ":  basic.get_approp_n_jobs(n_jobs)
+        
+        auto_sklearn_trial.clf_params = base_params
+        self.trial_list.append(auto_sklearn_trial)
         return auto_sklearn_trial
 
     # def generate_tpot_trial(self, mode='fast', **kwargs):
