@@ -18,7 +18,7 @@ URL = 'https://github.com/lai-bluejay/diego'
 EMAIL = 'lai.bluejay@gmail.com'
 AUTHOR = 'Charles Lai'
 REQUIRES_PYTHON = '>=3.6.0'
-VERSION = '0.2.4'
+VERSION = '0.2.4.1'
 
 
 # What packages are required for this module to be executed?
@@ -36,7 +36,7 @@ REQUIRED = [
     'pyrfr>=0.7,<0.9',
     'smac>=0.8',
     'ConfigSpace<0.5,>=0.4.14',
-    'auto-sklearn',
+    'auto-sklearn>=0.11',
     'liac-arff'
 ]
 
