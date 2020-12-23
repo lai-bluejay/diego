@@ -137,12 +137,6 @@ class AutobinningTransform(BaseEstimator, TransformerMixin):
         self.keep_origin = param_dic.get('keep_origin',self.keep_origin)
         # self.bins_conf_file = param_dic.get('bins_conf_file',self.bins_conf_file)
         # self.type_conf_file = param_dic.get('type_conf_file',self.type_conf_file)
-
-        if isinstance(self.outlier_threshold,float):
-            self.outlier_threshold *= len(self.input_node.feature)
-        if isinstance(self.bins_threshold,float):
-            self.bins_threshold *= len(self.input_node.feature)
-
         # fit_model
         self.bins_model_save = None
         self.featurename = list()
