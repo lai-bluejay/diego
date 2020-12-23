@@ -1,5 +1,1 @@
-setuptools
-nose
-Cython
-tpot
-colorlog>=4.0.2
+# colorlog>=4.0.2
