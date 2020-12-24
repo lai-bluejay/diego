@@ -23,8 +23,9 @@ def simple_diego(X, Y, metrics='acc'):
     ensemble_memory_limit=1024,
     seed=1,
     ml_memory_limit=10240,
+    # include_estimators=["adaboost", "extra_trees", "k_nearest_neighbors",
+    #             "libsvm_svc", "random_forest", "gaussian_nb","xgradient_boosting"])
     include_estimators=["adaboost", "extra_trees", "k_nearest_neighbors",
-                "libsvm_svc", "random_forest", "gaussian_nb","xgradient_boosting"])
+                "libsvm_svc", "random_forest", "gaussian_nb"])
     ts_autobin.optimize(X_valid, y_valid, n_jobs=-1, metrics=metrics)
     ts_autobin.show_models()
-    return ts_autobin.pipeline

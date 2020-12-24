@@ -14,6 +14,11 @@ sys.path.append("%s/.." % root)
 sys.path.append("%s/../diego" % root)
 sys.path.append("%s/../../.." % root)
 sys.path.append(u"{0:s}".format(root))
+
+# import warnings filter
+from warnings import simplefilter
+# ignore all future warnings
+simplefilter(action='ignore', category=FutureWarning)
 import numpy as np
 from diego.study import create_study
 from autosklearn.classification import AutoSklearnClassifier
@@ -24,11 +29,11 @@ if __name__ == "__main__":
     X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(digits.data, digits.target,
                                                                                 train_size=0.8, test_size=0.2)
 
-    s = create_study(X_train, y_train,is_autobin=True,  sample_method=None, precision=np.float32)
+    s = create_study(X_train, y_train,is_autobin=True, metrics='acc',  sample_method=None, precision=np.float32)
     s.generate_trial(mode='fast', n_jobs=-1, 
-        include_estimators=['gaussian_nb', 'random_forest', 'sgd', 'xgradient_boosting', 'LogisticRegressionSK', 'LogisticRegressionSMAC'])
+        include_estimators=['gaussian_nb', 'random_forest', 'sgd', 'LogisticRegressionSK', 'LogisticRegressionSMAC'])
 
-    s.optimize(X_test, y_test, metrics='acc')
+    s.optimize(X_test, y_test)
     s.ensemble.clf.show_models()
     s.show_models()
 

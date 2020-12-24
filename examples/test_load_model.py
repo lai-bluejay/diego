@@ -7,7 +7,7 @@ Author: Charles_Lai
 Email: lai.bluejay@gmail.com
 """
 
-from sklearn.externals import joblib
+import joblib
 
 pipeline = joblib.load('./hehediego_model_no-name-00000000-0000-0000-0000-000000000000.joblib')
 import sklearn.datasets

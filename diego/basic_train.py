@@ -20,10 +20,10 @@ import scipy.stats
 from sklearn.base import BaseEstimator
 from sklearn.model_selection._split import _RepeatedSplits, \
     BaseShuffleSplit, BaseCrossValidator
-from sklearn.externals import joblib
+import joblib
 import sklearn.utils
 import scipy.sparse
-from sklearn.metrics.classification import type_of_target
+from sklearn.utils.multiclass import type_of_target
 
 from autosklearn.metrics import Scorer
 from autosklearn.data.abstract_data_manager import AbstractDataManager

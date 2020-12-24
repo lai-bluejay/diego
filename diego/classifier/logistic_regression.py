@@ -9,7 +9,6 @@ Email: lai.bluejay@gmail.com
 import numpy as np
 
 # from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.linear_model.base import LinearClassifierMixin, SparseCoefMixin, BaseEstimator
 from sklearn.linear_model import LogisticRegression
 
 from ConfigSpace.configuration_space import ConfigurationSpace
@@ -26,7 +25,6 @@ from autosklearn.pipeline.constants import DENSE, SIGNED_DATA, UNSIGNED_DATA, \
 from sklearn.linear_model import LogisticRegression
 
 from lightning.classification import SGDClassifier, SVRGClassifier, SAGAClassifier, AdaGradClassifier
-print(SGDClassifier)
 
 class LogisticRegressionSMAC(AutoSklearnClassificationAlgorithm):
     def __init__(self, solver='svrg', loss="hinge", penalty="l2",
@@ -90,6 +88,7 @@ class LogisticRegressionSMAC(AutoSklearnClassificationAlgorithm):
                 'handles_classification': True,
                 'handles_multiclass': True,
                 'handles_multilabel': False,
+                'handles_multioutput': False,
                 'is_deterministic': False,
                 # Both input and output must be tuple(iterable)
                 'input': [DENSE, SIGNED_DATA, UNSIGNED_DATA],

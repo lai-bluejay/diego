@@ -455,8 +455,8 @@ class XGBBinning(BaseBinning):
                 'grow_policy': 'lossguide',
                 'max_leaves': num_leaves,
                 'min_child_weight': min_child_weight,
-                'max_bins': 1024,
-                'silent':True
+                'max_bin': 1024,
+                'verbosity':0
             }
 
             dtr = xgb.DMatrix(feature, label=label)

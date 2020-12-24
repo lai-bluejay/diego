@@ -6,6 +6,19 @@ file in :relativeFile
 Author: Charles_Lai
 Email: lai.bluejay@gmail.com
 """
+import os
+import sys
+root = os.path.dirname(os.path.abspath(__file__))
+sys.path.append("%s/../.." % root)
+sys.path.append("%s/.." % root)
+sys.path.append("%s/../../.." % root)
+sys.path.append("{0:s}".format(root))
+
+
+# import warnings filter
+from warnings import simplefilter
+# ignore all future warnings
+simplefilter(action='ignore', category=FutureWarning)
 
 import copy
 
@@ -284,6 +297,7 @@ class AutoBinning(AutoSklearnPreprocessingAlgorithm):
                 'handles_classification': True,
                 'handles_multiclass': False,
                 'handles_multilabel': False,
+                'handles_multioutput': False,
                 'is_deterministic': True,
                 'input': (DENSE, UNSIGNED_DATA, SIGNED_DATA),
                 'output': (DENSE, UNSIGNED_DATA, SIGNED_DATA)}
@@ -334,7 +348,6 @@ if __name__ == '__main__':
 
     # Fit the model using LDA as preprocessor.
     clf = autosklearn.classification.AutoSklearnClassifier(
-        time_left_for_this_task=30,
         include_preprocessors=['AutoBinning'],
     )
     clf.fit(X_train, y_train)

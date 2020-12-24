@@ -22,8 +22,8 @@ import numpy as np
 
 from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.utils import validation
-from sklearn.externals import joblib, six
-
+import joblib
+import six
 from diego.depens import logging
 from diego.preprocessor import AutobinningTransform, LocalUncertaintySampling
 from diego.trials import Trial
@@ -149,7 +149,9 @@ class Study(object):
         self.layer = list()
         self.ensemble = None
         self.metrics = metrics
-        opt_est = ['gaussian_nb','random_forest', 'sgd', 'xgradient_boosting'] + [t for t in classification._addons.components]
+        # opt_est = ['gaussian_nb','random_forest', 'sgd', 'xgradient_boosting'] + [t for t in classification._addons.components]
+        opt_est = ['gaussian_nb','random_forest', 'sgd'] + [t for t in classification._addons.components]
+
         hint = """
         You can generate trial by study.generate_trial(mode='fast').
         The option of trial estimator is recomended: {}
@@ -330,7 +332,7 @@ class Study(object):
             warnings.simplefilter("ignore", category=RuntimeWarning)
             # do not generate clf in advanced.
             self._optimize_sequential(
-                self.trial_list, timeout, catch, metrics=metrics)
+                self.trial_list, timeout, catch, metrics=self.metrics)
             self._make_ensemble()
             self._pipe_add(self.best_trial.clf)
             self._export_model(self.export_model_path)
@@ -345,6 +347,7 @@ class Study(object):
         self.logger.info(self.ensemble.clf.show_models())
         test_res = self.ensemble.predict(self.storage.X_test)
         metrics_func = self._get_metric(self.metrics)
+        metrics_func = self._get_metric('acc')
         result = metrics_func(self.storage.y_test, test_res)
         self.logger.info("The ensemble of all trials get the result: {0}   {1}".format(self.metrics, result))
 
@@ -448,7 +451,7 @@ class Study(object):
     def _init_trials(self, n_jobs=1):
         # tpot耗时较久，舍弃。相同时间内不如auto-sklearn
         auto_sklearn_trial = self.generate_trial(mode='fast', n_jobs=n_jobs, include_estimators=[
-                                                 "extra_trees", "random_forest", "gaussian_nb", "xgradient_boosting"])
+                                                 "extra_trees", "random_forest", "gaussian_nb"])
         # tpot_trial = self.generate_tpot_trial()
         return [auto_sklearn_trial]
 
@@ -638,12 +641,12 @@ class Study(object):
         return trial
 
     def generate_trial(self, mode='fast', n_jobs=-1, time_left_for_this_task=3600, per_run_time_limit=360,
-                       initial_configurations_via_metalearning=25, ensemble_size=50, ensemble_nbest=50,metrics='logloss',
-                       ensemble_memory_limit=4096, seed=1, ml_memory_limit=10240, include_estimators=['random_forest',  'xgradient_boosting', 'LogisticRegressionSK', 'LogisticRegressionSMAC'],
+                       initial_configurations_via_metalearning=25, ensemble_size=50, ensemble_nbest=50,
+                        seed=1,include_estimators=['random_forest', 'LogisticRegressionSK', 'LogisticRegressionSMAC'],
                        exclude_estimators=None, include_preprocessors=None, exclude_preprocessors=None,
                        resampling_strategy='cv', resampling_strategy_arguments={'folds': 5},
                        tmp_folder="/tmp/autosklearn_tmp", output_folder="/tmp/autosklearn_output", delete_tmp_folder_after_terminate=True, delete_output_folder_after_terminate=True, 
-                       shared_mode=False, disable_evaluator_output=False, get_smac_object_callback=None, smac_scenario_args=None, 
+                       disable_evaluator_output=False, get_smac_object_callback=None, smac_scenario_args=None, 
                        logging_config=None):
         """ generate trial's base params
         estimators list:
@@ -678,8 +681,8 @@ class Study(object):
         elif mode == 'big':
             ensemble_size = 50
             ensemble_nbest = 20
-            ml_memory_limit = 10240
-            ensemble_memory_limit = 4096
+            # ml_memory_limit = 10240
+            # ensemble_memory_limit = 4096
             time_left_for_this_task = 14400
             per_run_time_limit = 1440
         else:
@@ -712,9 +715,9 @@ class Study(object):
                     "initial_configurations_via_metalearning": initial_configurations_via_metalearning,
                     "ensemble_size": ensemble_size,
                     "ensemble_nbest": ensemble_nbest,
-                    "ensemble_memory_limit": ensemble_memory_limit,
+                    # "ensemble_memory_limit": ensemble_memory_limit,
                     "seed": seed,
-                    "ml_memory_limit": ml_memory_limit,
+                    # "ml_memory_limit": ml_memory_limit,
                     "include_estimators": include_estimators,
                     "exclude_estimators": exclude_estimators,
                     "include_preprocessors": include_preprocessors,
@@ -724,11 +727,12 @@ class Study(object):
                     "tmp_folder":train_folder, "output_folder": train_output_folder, 
                     "delete_tmp_folder_after_terminate": delete_tmp_folder_after_terminate, 
                     "delete_output_folder_after_terminate": delete_output_folder_after_terminate, 
-                    "shared_mode": shared_mode, "disable_evaluator_output": disable_evaluator_output, 
+                    # "shared_mode": shared_mode, 
+                    "disable_evaluator_output": disable_evaluator_output, 
                     "get_smac_object_callback": get_smac_object_callback, 
                     "smac_scenario_args": smac_scenario_args, 
                     "logging_config": logging_config,
-                    'metrics': metrics_func}
+                    'metric': metrics_func}
         # n_jobs ":  basic.get_approp_n_jobs(n_jobs)
         
         auto_sklearn_trial.clf_params = base_params

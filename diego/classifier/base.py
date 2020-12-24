@@ -13,7 +13,7 @@ import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils import check_X_y, check_array
 import sklearn.utils
-from sklearn.metrics.classification import type_of_target
+from sklearn.utils.multiclass import type_of_target
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
 
@@ -22,7 +22,7 @@ from diego.basic import *
 from diego.metrics import Scorer
 
 
-class DiegoClassifier(BaseAutoML):
+class DiegoClassifier(AutoML):
     # C3 BFS search class methods
     # TODO Rewrite Ensemble methods
     def __init__(self, *args, **kwargs):
