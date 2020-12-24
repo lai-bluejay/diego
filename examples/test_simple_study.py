@@ -9,10 +9,7 @@ Email: lai.bluejay@gmail.com
 import os
 import sys
 root = os.path.dirname(os.path.abspath(__file__))
-sys.path.append("%s/../.." % root)
-sys.path.append("%s/.." % root)
 sys.path.append("%s/../diego" % root)
-sys.path.append("%s/../../.." % root)
 sys.path.append(u"{0:s}".format(root))
 import numpy as np
 from diego.study import create_study
@@ -27,5 +24,5 @@ if __name__ == "__main__":
     s = create_study(X_train, y_train,is_autobin=True,  sample_method=None, precision=np.float32)
     # s.generate_autosk_trial(mode='fast', n_jobs=1)
 
-    s.optimize(X_test, y_test, metrics='acc')
+    s.optimize(X_test, y_test)
     s.show_models()

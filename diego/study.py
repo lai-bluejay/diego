@@ -102,8 +102,9 @@ class Study(object):
             sample_params=dict(),
             is_autobin=False,
             bin_params=dict(),
+            metrics: str ='logloss',
             export_model_path=None,
-            precision=np.float64
+            precision=np.float64,
     ):
         """[summary]
         
@@ -147,6 +148,7 @@ class Study(object):
         self.stack = EnsembleStack()
         self.layer = list()
         self.ensemble = None
+        self.metrics = metrics
         opt_est = ['gaussian_nb','random_forest', 'sgd', 'xgradient_boosting'] + [t for t in classification._addons.components]
         hint = """
         You can generate trial by study.generate_trial(mode='fast').
@@ -251,7 +253,6 @@ class Study(object):
             n_jobs=-1,  # type: int
             # type: Union[Tuple[()], Tuple[Type[Exception]]]
             catch=(Exception, ),
-            metrics: str ='logloss',
             precision=None,
     ):
         # type: (...) -> None
@@ -317,8 +318,7 @@ class Study(object):
         if self.trial_list is None or self.trial_list == []:
             self.logger.warning('no trials, init by default params.')
             self.trial_list = self._init_trials(n_jobs)
-        self.metrics = metrics
-        if metrics in ['logloss']:
+        if self.metrics in ['logloss']:
             self.storage.direction = basic.StudyDirection.MINIMIZE
         # 当前保证在Trial内进行多进程
         # if n_jobs == 1:
@@ -550,15 +550,13 @@ class Study(object):
             return diego_metrics.f1
         elif metrics == 'mae':
             return diego_metrics.mean_absolute_error
-        elif metrics == 'pac':
-            return diego_metrics.pac_score
 
     def _run_trial(self, trial, catch, metrics='auc'):
         # type: (ObjectiveFuncType, Union[Tuple[()], Tuple[Type[Exception]]]) -> trial_module.Trial
         trial_number = trial.number
         metrics_func = self._get_metric(metrics)
         try:
-            trial = self.fit_autosk_trial(trial, metric=metrics_func)
+            trial = self.fit_autosk_trial(trial,)
             self.layer.append(trial.clf)
             y_pred = trial.clf.predict_proba(self.storage.X_test)
             result = metrics_func(self.storage.y_test, y_pred)
@@ -619,7 +617,7 @@ class Study(object):
                              trial_number, value, self.best_value))
 
     # TODO decorator, add trials to pipeline.
-    def fit_autosk_trial(self, trial, metric,  **kwargs):
+    def fit_autosk_trial(self, trial,  **kwargs):
         # n_jobs = basic.get_approp_n_jobs(n_jobs)
         trial_number = trial.number
         params = trial.clf_params
@@ -627,7 +625,7 @@ class Study(object):
         # X_train = self.storage.X_train
         # y_train = self.storage.y_train
         # TODO metrics to trial
-        autosk_clf.fit(self.storage.X_train, self.storage.y_train, metric=metric)
+        autosk_clf.fit(self.storage.X_train, self.storage.y_train)
         if autosk_clf.resampling_strategy not in ['holdout', 'holdout-iterative-fit']:
             self.logger.warning(
                 'Predict is currently not implemented for resampling strategy, refit it.')
@@ -640,7 +638,7 @@ class Study(object):
         return trial
 
     def generate_trial(self, mode='fast', n_jobs=-1, time_left_for_this_task=3600, per_run_time_limit=360,
-                       initial_configurations_via_metalearning=25, ensemble_size=50, ensemble_nbest=50,
+                       initial_configurations_via_metalearning=25, ensemble_size=50, ensemble_nbest=50,metrics='logloss',
                        ensemble_memory_limit=4096, seed=1, ml_memory_limit=10240, include_estimators=['random_forest',  'xgradient_boosting', 'LogisticRegressionSK', 'LogisticRegressionSMAC'],
                        exclude_estimators=None, include_preprocessors=None, exclude_preprocessors=None,
                        resampling_strategy='cv', resampling_strategy_arguments={'folds': 5},
@@ -706,6 +704,7 @@ class Study(object):
         self.logger.info('The output of classifier will save in {}'.format(output_folder))
         self.logger.info('And it will delete tmp folder after terminate.')
 
+        metrics_func = self._get_metric(self.metrics)
 
         base_params = {'n_jobs': n_jobs,
                     "time_left_for_this_task": time_left_for_this_task,
@@ -728,7 +727,8 @@ class Study(object):
                     "shared_mode": shared_mode, "disable_evaluator_output": disable_evaluator_output, 
                     "get_smac_object_callback": get_smac_object_callback, 
                     "smac_scenario_args": smac_scenario_args, 
-                    "logging_config": logging_config}
+                    "logging_config": logging_config,
+                    'metrics': metrics_func}
         # n_jobs ":  basic.get_approp_n_jobs(n_jobs)
         
         auto_sklearn_trial.clf_params = base_params
@@ -810,6 +810,7 @@ def get_storage(storage):
 def create_study(X, y,
                  storage=None,  # type: Union[None, str, storages.BaseStorage]
                  sample_method=None,
+                 metrics=None,
                  study_name=None,  # type: Optional[str]
                  direction='maximize',  # type: str
                  load_cache=False,  # type: bool
@@ -818,7 +819,7 @@ def create_study(X, y,
                  sample_params=dict(),
                  trials_list=list(),
                  export_model_path=None,
-                 precision=np.float64
+                 precision=np.float64,
                  ):
     # type: (...) -> Study
     """Create a new :class:`~diego.study.Study`.
@@ -858,6 +859,7 @@ def create_study(X, y,
         raise
 
     study_name = storage.get_study_name_from_id(study_id)
+    
     study = Study(
         study_name=study_name,
         storage=storage,
@@ -865,8 +867,9 @@ def create_study(X, y,
         is_autobin=is_autobin,
         bin_params=bin_params,
         export_model_path=export_model_path,
-        precision=precision)
-
+        precision=precision,
+        metrics=metrics)
+    
     if direction == 'minimize':
         _direction = basic.StudyDirection.MINIMIZE
     elif direction == 'maximize':
@@ -874,7 +877,8 @@ def create_study(X, y,
     else:
         raise ValueError(
             'Please set either \'minimize\' or \'maximize\' to direction.')
-    
+    if metrics in ['logloss']:
+        _direction  = basic.StudyDirection.MINIMIZE
     X = X.astype(dtype=precision, copy=False)
     study.storage.direction = _direction
     study.storage.set_train_storage(X, y)

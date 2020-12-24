@@ -24,12 +24,12 @@ VERSION = '0.2.4.2'
 # What packages are required for this module to be executed?
 REQUIRED = [
     # 'requests', 'maya', 'records',
-    'numpy==1.16.2',
+    'numpy>=1.16.2',
     'scipy>=0.19.0',
     'scikit-learn>=0.23',
     'deap>=1.0',
     'update_checker>=0.16',
-    'tqdm==4.26.0',
+    'tqdm>=4.26.0',
     'stopit>=1.1.1',
     'pandas>=1.0',
     'xgboost',
@@ -37,7 +37,8 @@ REQUIRED = [
     'smac>=0.8',
     'ConfigSpace<0.5,>=0.4.14',
     'auto-sklearn>=0.11',
-    'liac-arff'
+    'liac-arff',
+    'sklearn-contrib-lightning'
 ]
 
 # What packages are optional?

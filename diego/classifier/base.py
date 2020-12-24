@@ -17,7 +17,7 @@ from sklearn.metrics.classification import type_of_target
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
 
-from autosklearn.automl import BaseAutoML
+from autosklearn.automl import AutoML
 from diego.basic import *
 from diego.metrics import Scorer
 

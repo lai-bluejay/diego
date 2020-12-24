@@ -24,7 +24,10 @@ Diego: Data in, IntElliGence Out.
 
 ```shell
 conda install --yes pip gcc swig libgcc=5.2.0
+# Mac OS 用户需要安装open MP
+# brew install libomp
 pip install diego
+
 ```
 
 安装好之后，开始6行代码解决一个分类问题吧。

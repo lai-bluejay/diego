@@ -7,4 +7,4 @@ Author: Charles_Lai
 Email: lai.bluejay@gmail.com
 """
 from diego.metrics.metrics import Scorer, make_scorer
-from diego.metrics.metrics import f1, roc_auc, mean_absolute_error, median_absolute_error, accuracy, balanced_accuracy, average_precision, log_loss, pac_score
+from diego.metrics.metrics import f1, roc_auc, mean_absolute_error, median_absolute_error, accuracy, balanced_accuracy, average_precision, log_loss
