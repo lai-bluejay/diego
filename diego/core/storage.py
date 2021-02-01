@@ -12,8 +12,6 @@ from datetime import datetime
 import threading
 import uuid
 import numpy as np
-from tpot import TPOTClassifier
-
 from diego import basic
 
 from typing import Any  # NOQA
@@ -220,8 +218,8 @@ class InMemoryStorage(object):
 
     def set_trial_clf(self, trial_id, clf):
         with self._lock:
-            if isinstance(clf, TPOTClassifier):
-                clf = clf.fitted_pipeline_
+            # if isinstance(clf, TPOTClassifier):
+            #     clf = clf.fitted_pipeline_
             self.trials[trial_id] = self.trials[trial_id]._replace(clf=clf)
 
     def set_trial_intermediate_value(self, trial_id, step, intermediate_value):

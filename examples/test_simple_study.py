@@ -37,6 +37,5 @@ if __name__ == "__main__":
             sklearn.model_selection.train_test_split(X, y, random_state=2047, train_size=0.8, test_size=0.2)
     s = create_study(X_train, y_train,is_autobin=False, metrics='acc', sample_method=None, precision=np.float32)
     # s.generate_autosk_trial(mode='fast', n_jobs=1)
-
     s.optimize(X_test, y_test)
     s.show_models()

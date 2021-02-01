@@ -105,7 +105,8 @@ class EnsembleStackClassifier(object):
 
     def refit(self, X, y):
         out = self.stack.output(X)
-    
+        print(out)
+        print(out.shape, y.shape)
         self.clf.fit(out, y)
 
     def predict(self, X):

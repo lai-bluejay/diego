@@ -20,9 +20,7 @@ def simple_diego(X, Y, metrics='acc'):
     initial_configurations_via_metalearning=25,
     ensemble_size=10,
     ensemble_nbest=3,
-    ensemble_memory_limit=1024,
     seed=1,
-    ml_memory_limit=10240,
     # include_estimators=["adaboost", "extra_trees", "k_nearest_neighbors",
     #             "libsvm_svc", "random_forest", "gaussian_nb","xgradient_boosting"])
     include_estimators=["adaboost", "extra_trees", "k_nearest_neighbors",

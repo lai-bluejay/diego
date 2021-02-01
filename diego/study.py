@@ -347,7 +347,7 @@ class Study(object):
         self.logger.info(self.ensemble.clf.show_models())
         test_res = self.ensemble.predict(self.storage.X_test)
         metrics_func = self._get_metric(self.metrics)
-        metrics_func = self._get_metric('acc')
+        # metrics_func = self._get_metric('acc')
         result = metrics_func(self.storage.y_test, test_res)
         self.logger.info("The ensemble of all trials get the result: {0}   {1}".format(self.metrics, result))
 
@@ -452,7 +452,6 @@ class Study(object):
         # tpot耗时较久，舍弃。相同时间内不如auto-sklearn
         auto_sklearn_trial = self.generate_trial(mode='fast', n_jobs=n_jobs, include_estimators=[
                                                  "extra_trees", "random_forest", "gaussian_nb"])
-        # tpot_trial = self.generate_tpot_trial()
         return [auto_sklearn_trial]
 
     def _optimize_sequential(
@@ -739,24 +738,6 @@ class Study(object):
         self.trial_list.append(auto_sklearn_trial)
         return auto_sklearn_trial
 
-    # def generate_tpot_trial(self, mode='fast', **kwargs):
-    #     tpot_trial = create_trial(self)
-    #     # ref: http://epistasislab.github.io/tpot/api/
-    #     # TPOT will evaluate population_size + generations × offspring_size pipelines in total.
-    #     if mode == 'fast':
-    #         tpot_clf = TPOTClassifier(generations=5, population_size=10,
-    #                                   verbosity=2, n_jobs=-1, max_eval_time_mins=10, early_stop=5)
-    #     elif mode == 'test':
-    #         tpot_clf = TPOTClassifier(
-    #             generations=2, population_size=10, n_jobs=-1, verbosity=1)
-    #     elif mode == 'self-define':
-    #         tpot_clf = TPOTClassifier(**kwargs)
-    #     else:
-    #         tpot_clf = TPOTClassifier(generations=50, population_size=100,
-    #                                   verbosity=2, scoring='accuracy', n_jobs=-1, max_eval_time_mins=60, early_stop=30)
-    #     tpot_trial.clf = tpot_clf
-    #     self.trial_list.append(tpot_trial)
-    #     return tpot_trial
 
     def add_preprocessor_trial(self, trial):
         pass
