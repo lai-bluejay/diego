@@ -639,7 +639,7 @@ class Study(object):
         trial.clf = autosk_clf
         return trial
 
-    def generate_trial(self, mode='fast', n_jobs=-1, time_left_for_this_task=3600, per_run_time_limit=360,
+    def generate_trial(self, mode='fast', n_jobs=-1, time_left_for_this_task=3600, per_run_time_limit=360,memory_limit=8192,
                        initial_configurations_via_metalearning=25, ensemble_size=50, ensemble_nbest=50,
                         seed=1,include_estimators=['random_forest', 'LogisticRegressionSK', 'LogisticRegressionSMAC'],
                        exclude_estimators=None, include_preprocessors=None, exclude_preprocessors=None,
@@ -675,12 +675,13 @@ class Study(object):
         if mode == 'fast':
             time_left_for_this_task = 120
             per_run_time_limit = 30
+            memory_limit = 4096
             ensemble_size = 5
             ensemble_nbest = 2
         elif mode == 'big':
             ensemble_size = 50
             ensemble_nbest = 20
-            # ml_memory_limit = 10240
+            memory_limit = 10240
             # ensemble_memory_limit = 4096
             time_left_for_this_task = 14400
             per_run_time_limit = 1440
@@ -716,7 +717,7 @@ class Study(object):
                     "ensemble_nbest": ensemble_nbest,
                     # "ensemble_memory_limit": ensemble_memory_limit,
                     "seed": seed,
-                    # "ml_memory_limit": ml_memory_limit,
+                    "memory_limit": memory_limit,
                     "include_estimators": include_estimators,
                     "exclude_estimators": exclude_estimators,
                     "include_preprocessors": include_preprocessors,

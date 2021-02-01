@@ -18,7 +18,7 @@ URL = 'https://github.com/lai-bluejay/diego'
 EMAIL = 'lai.bluejay@gmail.com'
 AUTHOR = 'Charles Lai'
 REQUIRES_PYTHON = '>=3.6.0'
-VERSION = '0.2.5'
+VERSION = '0.2.6.1'
 
 
 # What packages are required for this module to be executed?
