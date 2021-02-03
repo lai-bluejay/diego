@@ -5,7 +5,6 @@
 @Time    :   2020/12/24 16:03:12
 @Author  :   Charles Lai 
 @Version :   1.0
-@Contact :   charleslaihongchang@didiglobal.com
 @Desc    :   None
 '''
 # here put the import lib
