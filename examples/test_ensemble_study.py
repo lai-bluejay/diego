@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     s = create_study(X_train, y_train,is_autobin=True, metrics='acc',  sample_method=None, precision=np.float32)
     s.generate_trial(mode='fast', n_jobs=-1, 
-        include_estimators=['gaussian_nb', 'random_forest', 'sgd', 'LogisticRegressionSK', 'LogisticRegressionSMAC'])
+        include_estimators=['sgd', 'LogisticRegressionSK'])
 
     s.optimize(X_test, y_test)
     s.ensemble.clf.show_models()

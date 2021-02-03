@@ -32,7 +32,7 @@ from diego import basic
 from diego.core import Storage, generate_uuid
 from diego import metrics as diego_metrics
 from diego.ensemble_net import Ensemble, EnsembleStack, EnsembleStackClassifier, Combiner
-from diego.classifier import LogisticRegressionSK, LogisticRegressionSMAC
+from diego.classifier import LogisticRegressionSK, LogisticRegressionSMAC, GradientBoostingClassifier
 
 import collections
 import datetime
@@ -52,6 +52,7 @@ gc.enable()
 
 classification.add_classifier(LogisticRegressionSK)
 classification.add_classifier(LogisticRegressionSMAC)
+classification.add_classifier(GradientBoostingClassifier)
 
 ObjectiveFuncType = Callable[[trial_module.Trial], float]
 
@@ -296,6 +297,7 @@ class Study(object):
             self.logger.info(
                 'Sampling is done. Sampled data shape is {0}'.format(str(self.storage.X_train.shape)))
             # self.storage.set_train_storage(X_train, y_train)
+            self._pipe_add(self.sampler)
 
         if self.is_autobin:
             self.logger.info("begin to autobinning data by {}  with method {}".format(
@@ -641,7 +643,7 @@ class Study(object):
 
     def generate_trial(self, mode='fast', n_jobs=-1, time_left_for_this_task=3600, per_run_time_limit=360,memory_limit=8192,
                        initial_configurations_via_metalearning=25, ensemble_size=50, ensemble_nbest=50,
-                        seed=1,include_estimators=['random_forest', 'LogisticRegressionSK', 'LogisticRegressionSMAC'],
+                        seed=1,include_estimators=['GB_hist', 'LogisticRegressionSK'],
                        exclude_estimators=None, include_preprocessors=None, exclude_preprocessors=None,
                        resampling_strategy='cv', resampling_strategy_arguments={'folds': 5},
                        tmp_folder="/tmp/autosklearn_tmp", output_folder="/tmp/autosklearn_output", delete_tmp_folder_after_terminate=True, delete_output_folder_after_terminate=True, 
@@ -675,7 +677,7 @@ class Study(object):
         if mode == 'fast':
             time_left_for_this_task = 120
             per_run_time_limit = 30
-            memory_limit = 4096
+            memory_limit = 8196
             ensemble_size = 5
             ensemble_nbest = 2
         elif mode == 'big':
