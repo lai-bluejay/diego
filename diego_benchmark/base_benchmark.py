@@ -17,7 +17,7 @@ def simple_diego(X, Y, metrics='acc'):
     ts_autobin = create_study(X_train, y_train)
     ts_autobin.generate_trial(n_jobs=10, mode='cus', time_left_for_this_task=3600,
     per_run_time_limit=360,
-    initial_configurations_via_metalearning=25,
+    initial_configurations_via_metalearning=0,
     ensemble_size=10,
     ensemble_nbest=3,
     seed=1,

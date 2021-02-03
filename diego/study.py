@@ -640,7 +640,7 @@ class Study(object):
         return trial
 
     def generate_trial(self, mode='fast', n_jobs=-1, time_left_for_this_task=3600, per_run_time_limit=360,memory_limit=8192,
-                       initial_configurations_via_metalearning=25, ensemble_size=50, ensemble_nbest=50,
+                       initial_configurations_via_metalearning=0, ensemble_size=50, ensemble_nbest=50,
                         seed=1,include_estimators=['random_forest', 'LogisticRegressionSK', 'LogisticRegressionSMAC'],
                        exclude_estimators=None, include_preprocessors=None, exclude_preprocessors=None,
                        resampling_strategy='cv', resampling_strategy_arguments={'folds': 5},
